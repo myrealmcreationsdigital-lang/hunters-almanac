@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f5ede0;--bg-panel:#ede3cc;--bg-mid:#e2d5b8;--bg-dark:#d4c49e;--accent:#6b4a0e;--accent-lt:#9a6d1a;--text:#1a1005;--text-sec:#3d2c0a;--text-muted:#7a6540;--border:#c8a85a;--red:#a03010;--shadow:rgba(0,0,0,.15);}
+body.dark{--bg:#0c150a;--bg-panel:#131d0e;--bg-mid:#1a2810;--bg-dark:#101808;--accent:#c4922a;--accent-lt:#e8c46a;--text:#e8dfc8;--text-sec:#b09878;--text-muted:#6a7a5a;--border:#2d3d1a;--red:#c44a2a;--shadow:rgba(0,0,0,.5);}
+html,body{height:100%;font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+#bar{height:58px;background:var(--bg-panel);border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+.logo{display:flex;align-items:center;gap:9px;color:var(--accent)}
+.logo-name{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--accent);display:block}
+.logo-tag{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);display:block}
+.bar-r{display:flex;gap:6px;align-items:center}
+.btn{background:var(--bg-mid);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:3px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-g{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.btn-g:hover{background:var(--accent-lt);border-color:var(--accent-lt)}
+#wrap{display:flex;height:calc(100vh - 58px);overflow:hidden}
+#sb{width:290px;flex-shrink:0;background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;}
+.tabs{display:flex;background:var(--bg-mid);border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:8px 2px 7px;text-align:center;cursor:pointer;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);border-bottom:2px solid transparent;transition:all .18s}
+.tab .ic{font-size:13px;display:block;margin-bottom:1px}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.pane{display:none;flex:1;overflow-y:auto;flex-direction:column;gap:9px;padding:12px}
+.pane.on{display:flex}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:3px}
+.inp{width:100%;background:var(--bg-dark);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:3px;font-size:12.5px;font-family:inherit;}
+.inp:focus{outline:none;border-color:var(--accent)}
+.inp::placeholder{color:var(--text-muted)}
+.inp option{background:var(--bg-dark)}
+.row{display:flex;gap:6px}.row .inp{flex:1}
+.wcard{background:var(--bg-dark);border:1px solid var(--border);border-radius:4px;padding:12px}
+.wplace{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:7px}
+.wmain{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.wic{font-size:32px}.wtemp{font-size:30px;font-weight:300}.wdesc{font-size:12px;color:var(--text-sec)}
+.wg{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.ws{background:var(--bg-mid);border-radius:3px;padding:7px}
+.wsl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted)}
+.wsv{font-size:15px;color:var(--accent-lt);margin-top:1px}
+.whunt{background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;padding:10px}
+.wrrow{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.wrlbl{font-size:11.5px;color:var(--text-sec)}.wstars{color:var(--accent);font-size:12px}
+.wnote{font-size:11px;color:var(--text-muted);line-height:1.6}
+.scard{background:var(--bg-dark);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.shead{padding:8px 11px;background:var(--bg-mid);font-size:11px;font-weight:600;text-transform:uppercase;color:var(--accent-lt)}
+.srow{display:flex;justify-content:space-between;padding:7px 11px;border-top:1px solid var(--border)}
+.stype{font-size:10px;color:var(--text-sec);text-transform:uppercase}
+.sdates{font-size:11px;color:var(--text);text-align:right;line-height:1.4}
+.tpills{display:flex;gap:4px;flex-wrap:wrap}
+.tpill{padding:3px 9px;border-radius:20px;font-size:10.5px;cursor:pointer;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-muted);transition:all .15s}
+.tpill.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.tcrd{background:var(--bg-dark);border:1px solid var(--border);border-radius:4px;padding:11px}
+.tcrd h4{font-size:12px;color:var(--accent-lt);margin-bottom:5px}
+.tcrd p{font-size:11px;color:var(--text-sec);line-height:1.65}
+.pinitem{background:var(--bg-dark);border:1px solid var(--border);border-radius:4px;padding:8px 11px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:border-color .15s}
+.pinitem:hover{border-color:var(--accent)}
+.pinico{font-size:18px}
+.pinnm{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pinxy{font-size:9.5px;color:var(--text-muted)}
+.pindel{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:3px;margin-left:auto}
+.pindel:hover{color:var(--red)}
+.empty{color:var(--text-muted);font-size:12px;text-align:center;padding:20px 6px;line-height:1.7}
+#mw{flex:1;position:relative;overflow:hidden}
+#map{width:100%;height:100%}
+#msbar{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:800;display:flex;box-shadow:0 2px 10px var(--shadow)}
+#msinp{width:260px;padding:7px 12px;font-size:12.5px;font-family:inherit;background:var(--bg-panel);color:var(--text);border:1px solid var(--border);border-right:none;border-radius:3px 0 0 3px;outline:none}
+#msbtn{padding:7px 12px;background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:0 3px 3px 0;cursor:pointer;font-size:12.5px;font-family:inherit;font-weight:600}
+.mbar{position:absolute;top:48px;left:10px;z-index:800;display:flex;gap:5px;flex-wrap:wrap}
+.mbt{background:rgba(245,237,224,.92);border:1px solid rgba(200,168,90,.7);color:var(--text);padding:5px 10px;border-radius:3px;cursor:pointer;font-size:11.5px;font-family:inherit;backdrop-filter:blur(5px);transition:all .15s;white-space:nowrap}
+body.dark .mbt{background:rgba(19,29,14,.92);border-color:rgba(45,61,26,.8)}
+.mbt:hover,.mbt.on{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important}
+#coord{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:800;background:rgba(245,237,224,.88);border:1px solid var(--border);border-radius:3px;padding:3px 10px;font-size:10.5px;color:var(--text-muted);pointer-events:none;backdrop-filter:blur(4px);white-space:nowrap}
+body.dark #coord{background:rgba(12,21,8,.88)}
+#pmod{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1200;background:var(--bg-panel);border:1px solid var(--accent);border-radius:6px;padding:18px;width:275px;display:none;box-shadow:0 8px 32px var(--shadow)}
+#pmod h3{font-family:'Cinzel',serif;font-size:13.5px;color:var(--accent);margin-bottom:13px;letter-spacing:1px}
+.mf{margin-bottom:9px}
+.mf label{display:block;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:4px}
+.mf textarea{resize:vertical;min-height:48px}
+.macts{display:flex;gap:7px;justify-content:flex-end;margin-top:12px}
+#photozone{border:1px dashed var(--border);border-radius:4px;cursor:pointer;overflow:hidden;transition:border-color .15s}
+#photozone:hover{border-color:var(--accent)}
+#photoprev{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px;min-height:60px}
+#photoprev img{width:100%;max-height:120px;object-fit:cover;border-radius:3px;display:block}
+.pinphoto{width:100%;max-height:140px;object-fit:cover;border-radius:3px;margin-top:6px;cursor:pointer}
+.pinphoto:hover{opacity:.85}
+.leaflet-control-zoom{border:1px solid var(--border)!important;box-shadow:none!important}
+.leaflet-control-zoom a{background:var(--bg-panel)!important;color:var(--text)!important;border-bottom-color:var(--border)!important}
+.leaflet-control-zoom a:hover{background:var(--bg-mid)!important;color:var(--accent)!important}
+/* ── MOBILE LAYOUT ──────────────────────────────────────────────── */
+#mobnav{display:none}
+@media(max-width:680px){
+  #bar{height:50px;padding:0 8px}
+  .logo svg{width:44px;height:26px}
+  .logo-name{font-size:12px;letter-spacing:1px}
+  .logo-tag{display:none}
+  .bar-r .btn-loc,.bar-r .btn-pin{display:none}
+  #wrap{flex-direction:column;height:calc(100vh - 50px - 58px)}
+  #sb{position:fixed;bottom:58px;left:0;right:0;width:100%;height:68vh;z-index:900;border-right:none;border-top:2px solid var(--border);transform:translateY(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);flex-shrink:0;border-radius:14px 14px 0 0;box-shadow:0 -6px 30px var(--shadow)}
+  #sb.open{transform:translateY(0)}
+  .tabs{display:none}
+  #mw{position:fixed;top:50px;left:0;right:0;bottom:58px;flex:unset}
+  #map{width:100%;height:100%}
+  #msbar{top:8px;left:50%;transform:translateX(-50%)}
+  #msinp{width:200px}
+  .mbar{top:44px;left:6px;gap:4px}
+  .mbt{font-size:10px;padding:4px 7px}
+  #coord{bottom:6px;font-size:9.5px}
+  #pmod{width:calc(100vw - 24px);max-height:80vh;overflow-y:auto;top:auto;bottom:70px;transform:translateX(-50%)}
+  #mobnav{display:flex;position:fixed;bottom:0;left:0;right:0;height:58px;background:var(--bg-panel);border-top:2px solid var(--border);z-index:1000;align-items:stretch}
+  .mobtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:2px;color:var(--text-muted);transition:color .15s;border:none;background:none;font-family:inherit;padding:0}
+  .mobtab .ic{font-size:18px;line-height:1}
+  .mobtab .lb{font-size:8px;text-transform:uppercase;letter-spacing:.8px}
+  .mobtab.on{color:var(--accent)}
+  .mobtab.map-btn{color:var(--accent-lt)}
+  #mob-fabs{position:fixed;right:12px;bottom:70px;z-index:800;display:flex;flex-direction:column;gap:8px}
+  .mob-fab{width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--bg-panel);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px var(--shadow)}
+  .mob-fab.fab-pin{background:var(--accent);color:#fff;border-color:var(--accent)}
+}
+.leaflet-popup-content-wrapper{background:var(--bg-panel);color:var(--text);border:1px solid var(--accent);box-shadow:0 4px 20px var(--shadow);border-radius:5px}
+.leaflet-popup-tip{background:var(--bg-panel)}
+.leaflet-popup-content{font-family:'Source Sans 3',sans-serif;font-size:12.5px;margin:9px 12px}
+.leaflet-popup-close-button{color:var(--text-muted)!important}
+.ptit{font-weight:700;color:var(--accent);font-size:13px;margin-bottom:2px}
+.pcat2{font-size:9px;text-transform:uppercase;color:var(--text-muted)}
+.pnote{margin-top:5px;font-size:11.5px;color:var(--text-sec);line-height:1.5}
+.pxy{margin-top:5px;font-size:9.5px;color:var(--text-muted)}
+@keyframes rip{0%{transform:scale(1);opacity:.7}100%{transform:scale(3);opacity:0}}
+.locdot{width:11px;height:11px;background:var(--accent);border-radius:50%;border:2px solid #fff;position:relative}
+.locdot::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:var(--accent);opacity:.5;animation:rip 1.5s ease-out infinite}
+.mooncard{background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;padding:14px;text-align:center}
+.moonface{font-size:64px;line-height:1;margin-bottom:6px;filter:drop-shadow(0 0 10px rgba(200,168,90,.4))}
+.moonname{font-family:'Cinzel',serif;font-size:14px;color:var(--accent);letter-spacing:2px;margin-bottom:3px}
+.moonpct{font-size:11px;color:var(--text-muted);margin-bottom:12px}
+.moongrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.moonstat{background:var(--bg-mid);border-radius:4px;padding:8px}
+.moonslbl{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:3px}
+.moonsval{font-size:12px;color:var(--accent-lt);font-weight:600}
+.moonhunt{background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;padding:10px;text-align:left}
+.moonhtit{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:5px}
+.moonhbody{font-size:11px;color:var(--text-sec);line-height:1.65}
+.moonrow{display:flex;gap:5px;flex-direction:column;margin-top:8px}
+.moonphaserow{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg-dark);border:1px solid var(--border);border-radius:4px}
+.moonphaserow.active{border-color:var(--accent);background:var(--bg-mid)}
+.mpric{font-size:20px}
+.mprtxt{flex:1}
+.mprname{font-size:11.5px;font-weight:600;color:var(--text)}
+.mprdate{font-size:10px;color:var(--text-muted)}
+.mprbadge{font-size:9px;background:var(--accent);color:#fff;padding:2px 6px;border-radius:10px;white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="bar">
+  <div class="logo">
+    <svg viewBox="0 0 76 44" width="76" height="44" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="0,44 22,14 44,44" fill="currentColor" opacity=".35"/>
+      <polygon points="18,44 44,4 70,44" fill="currentColor" opacity=".75"/>
+      <polygon points="48,44 64,18 80,44" fill="currentColor" opacity=".3"/>
+      <polygon points="1,44 5,35 9,44" fill="currentColor"/>
+      <polygon points="2,36 5,28 8,36" fill="currentColor"/>
+      <polygon points="3,29 5,23 7,29" fill="currentColor"/>
+      <polygon points="63,44 67,35 71,44" fill="currentColor"/>
+      <polygon points="64,36 67,28 70,36" fill="currentColor"/>
+      <polygon points="65,29 67,23 69,29" fill="currentColor"/>
+      <polygon points="70,44 74,37 78,44" fill="currentColor"/>
+      <polygon points="71,38 74,31 77,38" fill="currentColor"/>
+    </svg>
+    <div><span class="logo-name">HUNTERS ALMANAC</span><span class="logo-tag">Field Companion</span></div>
+  </div>
+  <div class="bar-r">
+    <button class="btn" id="darkbtn" onclick="toggleDark()">🌙</button>
+    <button class="btn btn-loc" onclick="locateMe()">📍 My Location</button>
+    <button class="btn btn-g btn-pin" onclick="startPin()">＋ Drop Pin</button>
+  </div>
+</div>
+<div id="wrap">
+  <div id="sb">
+    <div class="tabs">
+      <div class="tab on" onclick="goTab('weather',this)"><span class="ic">🌤</span>Weather</div>
+      <div class="tab" onclick="goTab('seasons',this)"><span class="ic">📅</span>Seasons</div>
+      <div class="tab" onclick="goTab('moon',this)"><span class="ic">🌙</span>Moon</div>
+      <div class="tab" onclick="goTab('tips',this)"><span class="ic">🎯</span>Tips</div>
+      <div class="tab" onclick="goTab('pins',this)"><span class="ic">📍</span>Pins</div>
+    </div>
+    <div class="pane on" id="pane-weather">
+      <div><div class="lbl">Live Conditions</div>
+        <div class="row"><input class="inp" id="wloc" type="text" placeholder="City or ZIP code…" onkeydown="if(event.key==='Enter')getWeather()"/><button class="btn" onclick="getWeather()">Go</button></div>
+      </div>
+      <div id="wout"><div class="empty">Enter a location to load live weather &amp; hunting conditions.</div></div>
+    </div>
+    <div class="pane" id="pane-seasons">
+      <div><div class="lbl">Select State</div><select class="inp" id="sstate" onchange="showSeasons(this.value)"><option value="">— Choose a State —</option></select></div>
+      <div id="sout"></div>
+    </div>
+    <div class="pane" id="pane-moon">
+      <div id="moonout"><div class="empty">Loading moon data…</div></div>
+    </div>
+    <div class="pane" id="pane-tips">
+      <div><div class="lbl">Filter by Game</div>
+        <div class="tpills">
+          <div class="tpill on" data-c="all" onclick="ftip(this)">All</div>
+          <div class="tpill" data-c="whitetail" onclick="ftip(this)">🦌 Whitetail</div>
+          <div class="tpill" data-c="turkey" onclick="ftip(this)">🦃 Turkey</div>
+          <div class="tpill" data-c="waterfowl" onclick="ftip(this)">🦆 Waterfowl</div>
+          <div class="tpill" data-c="elk" onclick="ftip(this)">🫎 Elk</div>
+          <div class="tpill" data-c="predator" onclick="ftip(this)">🐺 Predator</div>
+          <div class="tpill" data-c="scouting" onclick="ftip(this)">🔭 Scouting</div>
+        </div>
+      </div>
+      <div id="tout"></div>
+    </div>
+    <div class="pane" id="pane-pins">
+      <div style="font-size:11.5px;color:var(--text-muted)">Click <b style="color:var(--accent)">Drop Pin</b> then tap the map to mark a spot.</div>
+      <div id="plist"><div class="empty">No pins yet.<br>Start marking your spots!</div></div>
+    </div>
+  </div>
+  <div id="mw">
+    <div id="map"></div>
+    <div id="msbar">
+      <input id="msinp" type="text" placeholder="🔍  Search city, address or ZIP…" onkeydown="if(event.key==='Enter')mapSearch()"/>
+      <button id="msbtn" onclick="mapSearch()">Go</button>
+    </div>
+    <div class="mbar">
+      <button class="mbt on" id="bt-street" onclick="setTile('street',this)">🗺 Street</button>
+      <button class="mbt" id="bt-sat" onclick="setTile('sat',this)">🛰 Satellite</button>
+      <button class="mbt" id="bt-topo" onclick="setTile('topo',this)">⛰ Topo</button>
+      <button class="mbt" id="bt-hybrid" onclick="setTile('hybrid',this)">🌐 Hybrid</button>
+      <button class="mbt" id="bt-lands" onclick="togLands(this)">🌲 Public Lands</button>
+    </div>
+    <div id="coord">Hover over map for coordinates</div>
+    <div id="pmod">
+      <h3>📍 Mark This Location</h3>
+      <div class="mf"><label>Category</label>
+        <select class="inp" id="pcat">
+          <option value="🦌">🦌 Deer Stand</option><option value="🏕">🏕 Ground Blind</option>
+          <option value="📷">📷 Trail Camera</option><option value="🌾">🌾 Food Plot</option>
+          <option value="💧">💧 Water Source</option><option value="🐾">🐾 Game Trail</option>
+          <option value="🔭">🔭 Glassing Spot</option><option value="🏆">🏆 Kill Site</option>
+          <option value="🚗">🚗 Access/Parking</option><option value="⚠️">⚠️ Hazard</option>
+          <option value="📍">📍 General POI</option>
+        </select>
+      </div>
+      <div class="mf"><label>Name</label><input class="inp" id="pname" type="text" placeholder="e.g. North Saddle Stand…"/></div>
+      <div class="mf"><label>Notes</label><textarea class="inp" id="pnotes" placeholder="Wind, patterns, last activity…"></textarea></div>
+      <div class="mf"><label>Photo (optional)</label>
+        <div id="photozone" onclick="document.getElementById('pphoto').click()">
+          <input type="file" id="pphoto" accept="image/*" style="display:none" onchange="handlePhotoSelect(this)"/>
+          <div id="photoprev"><span style="font-size:22px">📷</span><span style="font-size:11px;color:var(--text-muted)">Tap to add photo</span></div>
+        </div>
+      </div>
+      <div class="macts">
+        <button class="btn" onclick="cancelPin()">Cancel</button>
+        <button class="btn btn-g" onclick="savePin()">Save Pin</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Mobile bottom nav -->
+<nav id="mobnav">
+  <button class="mobtab on" id="mnt-weather" onclick="mobTab('weather',this)"><span class="ic">🌤</span><span class="lb">Weather</span></button>
+  <button class="mobtab" id="mnt-seasons" onclick="mobTab('seasons',this)"><span class="ic">📅</span><span class="lb">Seasons</span></button>
+  <button class="mobtab" id="mnt-moon" onclick="mobTab('moon',this)"><span class="ic">🌙</span><span class="lb">Moon</span></button>
+  <button class="mobtab" id="mnt-tips" onclick="mobTab('tips',this)"><span class="ic">🎯</span><span class="lb">Tips</span></button>
+  <button class="mobtab" id="mnt-pins" onclick="mobTab('pins',this)"><span class="ic">📍</span><span class="lb">Pins</span></button>
+  <button class="mobtab map-btn" id="mnt-map" onclick="mobShowMap()"><span class="ic">🗺</span><span class="lb">Map</span></button>
+</nav>
+<!-- Mobile floating action buttons -->
+<div id="mob-fabs">
+  <button class="mob-fab" onclick="locateMe()" title="My Location">📍</button>
+  <button class="mob-fab fab-pin" onclick="startPin()" title="Drop Pin">＋</button>
+</div>
+<script>
+function toggleDark(){const d=document.body.classList.toggle('dark');document.getElementById('darkbtn').textContent=d?'☀️':'🌙';}
+const map=L.map('map').setView([39.5,-98.35],5);
+const TL={street:L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}),sat:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:19}),topo:L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{attribution:'© OpenTopoMap',maxZoom:17}),hybrid:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:19})};
+const hybLbl=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{opacity:.5,maxZoom:19,attribution:''});
+let cur='street';TL.street.addTo(map);let landsOn=false,landsLyr=null;
+function setTile(n,btn){map.removeLayer(TL[cur]);if(cur==='hybrid')map.removeLayer(hybLbl);TL[n].addTo(map);cur=n;if(n==='hybrid')hybLbl.addTo(map);document.querySelectorAll('.mbt[id^="bt-"]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
+function togLands(btn){if(!landsOn){landsLyr=L.tileLayer.wms('https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_ForestSystemBoundaries_01/MapServer/WMSServer',{layers:'0',format:'image/png',transparent:true,opacity:.4,attribution:'USFS'});landsLyr.addTo(map);btn.classList.add('on');landsOn=true;}else{map.removeLayer(landsLyr);btn.classList.remove('on');landsOn=false;}}
+map.on('mousemove',e=>{const{lat,lng}=e.latlng;document.getElementById('coord').textContent=`${lat.toFixed(5)}°N  ${Math.abs(lng).toFixed(5)}°${lng<0?'W':'E'}`;});
+async function mapSearch(){const q=document.getElementById('msinp').value.trim();if(!q)return;try{const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1`);const d=await r.json();if(!d.results?.length){alert('Location not found.');return;}const{latitude:lat,longitude:lng,name,admin1}=d.results[0];map.flyTo([lat,lng],11,{duration:1.3});L.popup().setLatLng([lat,lng]).setContent(`<div class="ptit">📍 ${name}${admin1?', '+admin1:''}</div><div class="pxy">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>`).openOn(map);document.getElementById('msinp').value='';}catch(e){alert('Search failed. Check your connection.');}}
+function locateMe(){if(!navigator.geolocation){alert('Geolocation not supported.');return;}navigator.geolocation.getCurrentPosition(pos=>{const{latitude:lat,longitude:lng,accuracy:acc}=pos.coords;map.flyTo([lat,lng],13,{duration:1.3});const ico=L.divIcon({html:'<div class="locdot"></div>',iconSize:[11,11],iconAnchor:[5.5,5.5],className:''});L.marker([lat,lng],{icon:ico}).addTo(map).bindPopup(`<div class="ptit">📍 Your Location</div><div class="pxy">${lat.toFixed(5)}, ${lng.toFixed(5)}<br>±${Math.round(acc)}m</div>`).openPopup();},err=>{const m={1:'Permission denied — use the map search bar.',2:'Location unavailable — use the map search bar.',3:'Timed out — use the map search bar.'};alert(m[err.code]||'Location error.');},{enableHighAccuracy:true,timeout:10000,maximumAge:0});}
+const WC={0:'Clear Sky',1:'Mostly Clear',2:'Partly Cloudy',3:'Overcast',45:'Foggy',51:'Light Drizzle',53:'Drizzle',61:'Light Rain',63:'Rain',65:'Heavy Rain',71:'Light Snow',73:'Snow',75:'Heavy Snow',80:'Showers',95:'Thunderstorm',99:'Severe Thunderstorm'};
+const WI={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',51:'🌦',53:'🌧',61:'🌧',63:'🌧',65:'🌧',71:'🌨',73:'❄️',75:'❄️',80:'🌦',95:'⛈',99:'⛈'};
+async function getWeather(){const q=document.getElementById('wloc').value.trim();if(!q)return;document.getElementById('wout').innerHTML='<div class="empty">Loading…</div>';try{const gr=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1`);const gd=await gr.json();if(!gd.results?.length){document.getElementById('wout').innerHTML='<div class="empty">Location not found.</div>';return;}const{latitude:lat,longitude:lng,name,admin1}=gd.results[0];const wr=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,apparent_temperature,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,weather_code,relative_humidity_2m,cloud_cover&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`);const wd=await wr.json();const c=wd.current,code=c.weather_code,hr=huntRating(c);document.getElementById('wout').innerHTML=`<div class="wcard"><div class="wplace">${name}${admin1?', '+admin1:''}</div><div class="wmain"><span class="wic">${WI[code]||'🌡'}</span><div><div class="wtemp">${Math.round(c.temperature_2m)}°F</div><div class="wdesc">${WC[code]||'Unknown'} · Feels ${Math.round(c.apparent_temperature)}°F</div></div></div><div class="wg"><div class="ws"><div class="wsl">Wind</div><div class="wsv">${Math.round(c.wind_speed_10m)} mph</div></div><div class="ws"><div class="wsl">Gusts</div><div class="wsv">${Math.round(c.wind_gusts_10m)} mph</div></div><div class="ws"><div class="wsl">Humidity</div><div class="wsv">${c.relative_humidity_2m}%</div></div><div class="ws"><div class="wsl">Wind Dir</div><div class="wsv">${d2c(c.wind_direction_10m)}</div></div><div class="ws"><div class="wsl">Precip</div><div class="wsv">${c.precipitation}"</div></div><div class="ws"><div class="wsl">Cloud</div><div class="wsv">${c.cloud_cover}%</div></div></div></div><div class="whunt"><div class="wrrow"><span class="wrlbl">Hunting Conditions:</span><span class="wstars">${hr.stars}</span></div><div class="wnote">${hr.note}</div></div>`;map.flyTo([lat,lng],9,{duration:1.3});}catch(e){document.getElementById('wout').innerHTML='<div class="empty">Error loading weather.</div>';}}
+function d2c(d){return['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(d/22.5)%16];}
+function huntRating(c){let sc=5,notes=[];const{wind_speed_10m:w,precipitation:pr,temperature_2m:t,weather_code:code}=c;if(w>25){sc-=2;notes.push('High winds — tough conditions');}else if(w>15){sc-=1;notes.push('Moderate wind — play thermals carefully');}else notes.push('Calm winds — ideal scent control');if(code>=95){sc-=2;notes.push('Active storms — deer bed down hard');}else if(pr>0.2){sc-=1;notes.push('Precipitation may suppress movement');}if(t<32)notes.push('Freezing temps — deer feed aggressively');else if(t<45)notes.push('Cool temps boost movement');else if(t>75)notes.push('Warm — hunt first and last hour only');sc=Math.max(1,Math.min(5,sc));return{stars:'⭐'.repeat(sc)+'☆'.repeat(5-sc),note:notes.join(' · ')};}
+let pins=JSON.parse(localStorage.getItem('ha_pins')||'[]'),pinMode=false,pendLL=null;const mks={};const catLbl={'🦌':'Deer Stand','🏕':'Ground Blind','📷':'Trail Camera','🌾':'Food Plot','💧':'Water Source','🐾':'Game Trail','🔭':'Glassing Spot','🏆':'Kill Site','🚗':'Access/Parking','⚠️':'Hazard','📍':'POI'};
+function savePinsLocal(){localStorage.setItem('ha_pins',JSON.stringify(pins));}
+function startPin(){pinMode=true;map.getContainer().style.cursor='crosshair';}
+map.on('click',e=>{if(!pinMode)return;pendLL=e.latlng;document.getElementById('pmod').style.display='block';document.getElementById('pname').value='';document.getElementById('pnotes').value='';pinMode=false;map.getContainer().style.cursor='';});
+function cancelPin(){document.getElementById('pmod').style.display='none';pendLL=null;pendPhoto=null;document.getElementById('photoprev').innerHTML='<span style="font-size:22px">📷</span><span style="font-size:11px;color:var(--text-muted)">Tap to add photo</span>';}
+let pendPhoto=null;
+function handlePhotoSelect(input){if(!input.files||!input.files[0])return;const file=input.files[0];if(file.size>5*1024*1024){alert('Photo must be under 5MB.');return;}const reader=new FileReader();reader.onload=e=>{pendPhoto=e.target.result;document.getElementById('photoprev').innerHTML=`<img src="${pendPhoto}" style="width:100%;max-height:120px;object-fit:cover;border-radius:3px"/>`;};reader.readAsDataURL(file);}
+function savePin(){if(!pendLL)return;const cat=document.getElementById('pcat').value,name=document.getElementById('pname').value.trim()||'Unnamed Pin',notes=document.getElementById('pnotes').value.trim();const pin={id:Date.now(),lat:pendLL.lat,lng:pendLL.lng,cat,name,notes,photo:pendPhoto||null};pins.push(pin);addMk(pin);renderPins();savePinsLocal();document.getElementById('pmod').style.display='none';document.getElementById('pphoto').value='';pendLL=null;pendPhoto=null;document.getElementById('photoprev').innerHTML='<span style="font-size:22px">📷</span><span style="font-size:11px;color:var(--text-muted)">Tap to add photo</span>';}
+function addMk(p){const ico=L.divIcon({html:`<div style="font-size:22px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.8));transform:translate(-11px,-22px)">${p.cat}</div>`,iconSize:[0,0],iconAnchor:[0,0],className:''});const m=L.marker([p.lat,p.lng],{icon:ico}).addTo(map);const photoHtml=p.photo?`<img src="${p.photo}" class="pinphoto" onclick="openPhoto('${p.id}')" title="Click to enlarge"/>`:'' ;m.bindPopup(`<div class="ptit">${p.cat} ${p.name}</div><div class="pcat2">${catLbl[p.cat]||'POI'}</div>${p.notes?`<div class="pnote">${p.notes}</div>`:''}<div class="pxy">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</div>${photoHtml}`);mks[p.id]=m;}
+function openPhoto(id){const p=pins.find(x=>x.id==id);if(!p||!p.photo)return;const w=window.open('','_blank');w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${p.photo}" style="max-width:100%;max-height:100vh;object-fit:contain"/></body></html>`);}
+function delPin(id){if(mks[id]){map.removeLayer(mks[id]);delete mks[id];}pins=pins.filter(p=>p.id!==id);renderPins();savePinsLocal();}
+function flyPin(p){map.flyTo([p.lat,p.lng],15,{duration:1.2});setTimeout(()=>mks[p.id]?.openPopup(),1300);}
+function renderPins(){const el=document.getElementById('plist');if(!pins.length){el.innerHTML='<div class="empty">No pins yet.<br>Start marking your spots!</div>';return;}el.innerHTML='<div style="display:flex;flex-direction:column;gap:5px">'+pins.map(p=>`<div class="pinitem" onclick='flyPin(${JSON.stringify(p).replace(/'/g,"&#39;")})'><span class="pinico">${p.cat}</span><div style="flex:1;min-width:0"><div class="pinnm">${p.name}</div><div class="pinxy">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</div></div>${p.photo?'<span style="font-size:13px;margin-right:4px" title="Has photo">🖼</span>':''}<button class="pindel" onclick="event.stopPropagation();delPin(${p.id})">✕</button></div>`).join('')+'</div>';}
+pins.forEach(p=>addMk(p));renderPins();
+const SD={"Alabama":{"🦌 Whitetail":[{t:"Archery",d:"Oct 15–Jan 31"},{t:"Primitive",d:"Oct 15–Nov 1"},{t:"Firearm",d:"Nov 18–Jan 31"}],"🦃 Turkey":[{t:"Spring",d:"Mar 23–Apr 30"},{t:"Fall",d:"Oct 15–Nov 1"}],"🦆 Waterfowl":[{t:"Duck",d:"Nov–Jan"},{t:"Goose",d:"Sep–Feb"}]},"Arkansas":{"🦌 Whitetail":[{t:"Archery",d:"Sep 26–Feb 28"},{t:"Muzzleloader",d:"Oct 17–27"},{t:"Firearm",d:"Nov 9–Dec 1"}],"🦃 Turkey":[{t:"Spring",d:"Apr 11–May 4"},{t:"Fall",d:"Oct 1–31"}],"🐗 Wild Hog":[{t:"Year-Round",d:"No closed season"}]},"Colorado":{"🫎 Elk":[{t:"Archery",d:"Aug 24–Sep 22"},{t:"Rifle 1st",d:"Oct 12–16"},{t:"Rifle 2nd",d:"Oct 19–27"},{t:"Rifle 3rd",d:"Nov 2–10"},{t:"Rifle 4th",d:"Nov 13–17"}],"🦌 Mule Deer":[{t:"Archery",d:"Aug 24–Sep 22"},{t:"Rifle",d:"Oct–Nov (unit)"}],"🐻 Black Bear":[{t:"Season",d:"Aug 26–Nov 24"}]},"Georgia":{"🦌 Whitetail":[{t:"Archery",d:"Sep 13–Oct 11"},{t:"Firearm",d:"Oct 19–Jan 15"}],"🦃 Turkey":[{t:"Spring",d:"Mar 22–May 15"}],"🐗 Wild Hog":[{t:"Year-Round",d:"No closed season"}]},"Idaho":{"🦌 Whitetail":[{t:"Archery",d:"Aug 30–Sep 29"},{t:"Firearm",d:"Oct 10–Nov 20"}],"🫎 Elk":[{t:"Archery",d:"Aug 30–Sep 29"},{t:"Firearm",d:"Oct 10–Nov 20"}],"🐻 Black Bear":[{t:"Spring",d:"Apr 15–Jun 30"},{t:"Fall",d:"Aug 30–Nov 30"}]},"Illinois":{"🦌 Whitetail":[{t:"Archery",d:"Oct 1–Jan 19"},{t:"Muzzleloader",d:"Oct 11–13"},{t:"Firearm",d:"Nov 20–24 & Dec 5–8"}],"🦃 Turkey":[{t:"Spring",d:"Apr 16–May 11"},{t:"Fall",d:"Oct 1–Nov 1"}]},"Indiana":{"🦌 Whitetail":[{t:"Archery",d:"Oct 1–Jan 5"},{t:"Firearm",d:"Nov 13–26"},{t:"Muzzleloader",d:"Oct 21–22 & Dec 7–22"}],"🦃 Turkey":[{t:"Spring",d:"Apr 23–May 7"}]},"Iowa":{"🦌 Whitetail":[{t:"Archery",d:"Oct 1–Jan 31"},{t:"Early Muzz.",d:"Oct 14–22"},{t:"Firearm 1st",d:"Dec 7–8"},{t:"Firearm 2nd",d:"Dec 14–22"}],"🦃 Turkey":[{t:"Spring",d:"Apr 14–May 11"},{t:"Fall",d:"Oct 1–Nov 30"}]},"Kansas":{"🦌 Whitetail":[{t:"Archery",d:"Sep 15–Dec 31"},{t:"Firearm",d:"Nov 27–Dec 8"},{t:"Muzzleloader",d:"Sep 15–Dec 31"}],"🦃 Turkey":[{t:"Spring",d:"Apr 16–May 31"},{t:"Fall",d:"Sep 1–Oct 31"}]},"Kentucky":{"🦌 Whitetail":[{t:"Archery",d:"Sep 6–Jan 17"},{t:"Early Gun",d:"Oct 10–19"},{t:"Firearm",d:"Nov 9–24"}],"🦃 Turkey":[{t:"Spring",d:"Apr 16–May 11"},{t:"Fall",d:"Oct 28–Nov 24"}],"🐻 Black Bear":[{t:"Season",d:"Oct 18–Nov 11 (E. KY)"}]},"Michigan":{"🦌 Whitetail":[{t:"Archery",d:"Oct 1–Nov 14 & Dec 1–Jan 1"},{t:"Firearm",d:"Nov 15–30"},{t:"Muzzleloader",d:"Dec 2–12"}],"🦃 Turkey":[{t:"Spring",d:"Apr 21–Jun 1"},{t:"Fall",d:"Sep 15–Nov 14"}],"🐻 Black Bear":[{t:"Season",d:"Sep 10–Oct 26"}]},"Minnesota":{"🦌 Whitetail":[{t:"Archery",d:"Sep 14–Dec 31"},{t:"Firearm",d:"Nov 2–17"},{t:"Muzzleloader",d:"Nov 23–Dec 8"}],"🦃 Turkey":[{t:"Spring",d:"Apr 16–May 31"},{t:"Fall",d:"Sep 1–Oct 31"}],"🐻 Black Bear":[{t:"Season",d:"Sep 1–Oct 18"}]},"Mississippi":{"🦌 Whitetail":[{t:"Archery",d:"Oct 1–Nov 1"},{t:"Firearm",d:"Nov 2–Jan 31"}],"🦃 Turkey":[{t:"Spring",d:"Mar 15–May 1"},{t:"Fall",d:"Oct 1–Nov 15"}],"🐗 Wild Hog":[{t:"Year-Round",d:"No closed season"}]},"Missouri":{"🦌 Whitetail":[{t:"Archery",d:"Sep 15–Nov 15 & Dec 1–Jan 15"},{t:"Firearm",d:"Nov 16–26"},{t:"Dec Firearm",d:"Dec 7–10"}],"🦃 Turkey":[{t:"Spring",d:"Apr 21–May 11"},{t:"Fall",d:"Oct 1–Nov 13"}]},"Montana":{"🫎 Elk":[{t:"Archery",d:"Sep 1–22"},{t:"General Rifle",d:"Oct 26–Nov 24"},{t:"Late Rifle",d:"Dec 1–15"}],"🦌 Mule Deer":[{t:"Archery",d:"Sep 1–22"},{t:"Rifle",d:"Oct 26–Nov 24"}],"🐻 Black Bear":[{t:"Spring",d:"Apr 15–Jun 15"},{t:"Fall",d:"Sep 1–Nov 30"}]},"Nebraska":{"🦌 Whitetail":[{t:"Archery",d:"Sep 1–Jan 15"},{t:"Firearm",d:"Nov 14–Dec 1"},{t:"Muzzleloader",d:"Dec 1–31"}],"🦃 Turkey":[{t:"Spring",d:"Apr 16–May 31"},{t:"Fall",d:"Sep 1–Oct 31"}]},"New York":{"🦌 Whitetail":[{t:"Archery",d:"Oct 1–Nov 19 & Dec 11–Jan 31"},{t:"Muzzleloader",d:"Oct 14–22"},{t:"Firearm",d:"Nov 18–Dec 10"}],"🦃 Turkey":[{t:"Spring",d:"May 1–31"},{t:"Fall",d:"Oct 1–Nov 14"}],"🐻 Black Bear":[{t:"Firearm",d:"Oct 26–Dec 17 (varies)"}]},"North Carolina":{"🦌 Whitetail":[{t:"Archery",d:"Sep 7–Oct 18"},{t:"Firearm",d:"Oct 19–Jan 1 (zone)"}],"🦃 Turkey":[{t:"Spring",d:"Apr 14–May 10"}],"🐻 Black Bear":[{t:"Season",d:"Nov 19–Dec 7 (varies)"}]},"Ohio":{"🦌 Whitetail":[{t:"Archery",d:"Oct 1–Feb 2"},{t:"Firearm",d:"Nov 30–Dec 8"},{t:"Muzzleloader",d:"Jan 4–7"}],"🦃 Turkey":[{t:"Spring",d:"Apr 28–May 18"},{t:"Fall",d:"Oct 14–19"}]},"Pennsylvania":{"🦌 Whitetail":[{t:"Archery",d:"Sep 30–Nov 15 & Dec 26–Jan 17"},{t:"Firearm",d:"Nov 25–Dec 9"},{t:"Muzzleloader",d:"Oct 14–22 & Dec 26–Jan 13"}],"🦃 Turkey":[{t:"Spring",d:"Apr 28–May 31"},{t:"Fall",d:"Oct 28–Nov 15"}],"🐻 Black Bear":[{t:"Firearm",d:"Nov 18–22"}]},"South Carolina":{"🦌 Whitetail":[{t:"Season",d:"Aug 15–Jan 1 (zone)"}],"🦃 Turkey":[{t:"Spring",d:"Apr 1–May 1"}],"🐗 Wild Hog":[{t:"Year-Round",d:"No closed season"}]},"Tennessee":{"🦌 Whitetail":[{t:"Archery",d:"Sep 28–Oct 25"},{t:"Muzzleloader",d:"Oct 26–Nov 1"},{t:"Firearm",d:"Nov 9–Jan 1 (zone)"}],"🦃 Turkey":[{t:"Spring",d:"Apr 7–May 11"}],"🐻 Black Bear":[{t:"Season",d:"Nov 28–Dec 4 (lottery)"}]},"Texas":{"🦌 Whitetail":[{t:"Archery",d:"Oct 1–Nov 1"},{t:"General",d:"Nov 2–Jan 19 (zone)"}],"🦃 Turkey":[{t:"Spring",d:"Apr 1–May 14"}],"🐗 Wild Hog":[{t:"Year-Round",d:"No closed season"}],"🦆 Waterfowl":[{t:"Duck",d:"Oct–Jan"},{t:"Goose",d:"Oct–Feb"}]},"Virginia":{"🦌 Whitetail":[{t:"Archery",d:"Sep 7–Oct 30"},{t:"Muzzleloader",d:"Oct 5–15 & Dec 7–14"},{t:"Firearm",d:"Nov 16–Dec 7"}],"🦃 Turkey":[{t:"Spring",d:"Apr 14–May 17"}],"🐻 Black Bear":[{t:"Season",d:"Nov 16–Dec 31 (varies)"}]},"Washington":{"🫎 Elk":[{t:"Archery",d:"Sep 1–22"},{t:"Firearm",d:"Oct (unit)"}],"🦌 Mule Deer":[{t:"Archery",d:"Sep 1–22"},{t:"Firearm",d:"Oct (unit)"}],"🐻 Black Bear":[{t:"Season",d:"Aug 1–Nov 15"}]},"West Virginia":{"🦌 Whitetail":[{t:"Archery",d:"Sep 28–Dec 31"},{t:"Firearm",d:"Nov 25–Dec 8"},{t:"Muzzleloader",d:"Dec 16–21"}],"🦃 Turkey":[{t:"Spring",d:"Apr 21–May 10"}],"🐻 Black Bear":[{t:"Firearm",d:"Nov 25–Dec 8"}]},"Wisconsin":{"🦌 Whitetail":[{t:"Archery",d:"Sep 14–Jan 5"},{t:"Firearm",d:"Nov 23–Dec 1"},{t:"Muzzleloader",d:"Nov 23–Dec 1"}],"🦃 Turkey":[{t:"Spring",d:"Apr 16–May 31"},{t:"Fall",d:"Sep 18–Oct 31"}],"🐻 Black Bear":[{t:"Season",d:"Sep 3–Oct 13"}]},"Wyoming":{"🫎 Elk":[{t:"Archery",d:"Sep 1–22"},{t:"Firearm",d:"Oct 10–Nov 10 (unit)"}],"🦌 Pronghorn":[{t:"Archery",d:"Aug 15–Sep 30"},{t:"Firearm",d:"Oct 1–15"}],"🦃 Turkey":[{t:"Spring",d:"Apr 1–May 31"}],"🐻 Black Bear":[{t:"Spring",d:"Apr 1–Jun 15"},{t:"Fall",d:"Sep 1–Nov 30"}]}};
+const ss=document.getElementById('sstate');Object.keys(SD).sort().forEach(s=>{const o=document.createElement('option');o.value=o.textContent=s;ss.appendChild(o);});
+function showSeasons(state){const el=document.getElementById('sout');if(!state){el.innerHTML='';return;}el.innerHTML=Object.entries(SD[state]).map(([sp,rows])=>`<div class="scard"><div class="shead">${sp}</div>${rows.map(r=>`<div class="srow"><div class="stype">${r.t}</div><div class="sdates">${r.d}</div></div>`).join('')}</div>`).join('');}
+const TIPS=[{c:'whitetail',i:'🦌',h:'Pre-Rut Scrape Lines',b:'As October temps drop, bucks begin checking scrape lines. Focus on pinch points between bedding and feeding. Hunt downwind during midday. Licking branches over scrapes are your best camera placements.'},{c:'whitetail',i:'🦌',h:'Morning vs. Evening Stands',b:'Morning hunts work best at funnels between bedding and feeding — enter before first light. Evening hunts perform better near food sources like food plots, bean fields, or white oak flats.'},{c:'whitetail',i:'🦌',h:'Peak Rut Tactics',b:'During peak rut, abandon food-source hunting. Set up on doe bedding areas and major travel corridors. All-day sits pay off. Use estrus bleats and aggressive grunting every 30–45 min to pull in cruising bucks.'},{c:'whitetail',i:'🦌',h:'Wind & Thermals',b:'Thermals rise in the morning and fall in the evening. In hill country, hunt slopes in the morning and bottoms in the evening. Thermals matter more than any scent spray you can buy.'},{c:'whitetail',i:'🦌',h:'Late Season Feeding',b:'Post-rut deer focus entirely on food. Lock on to standing corn, crop waste, or late food plots. Cold snaps after warm stretches trigger feeding frenzies. Hunt field edges in the final hour of daylight.'},{c:'turkey',i:'🦃',h:'Reading Turkey Roosts',b:'Scout 1–2 weeks before season by listening at dusk. Set up 100–150 yards from the roost before light and call softly at fly-down. Never set up directly under the roost tree.'},{c:'turkey',i:'🦃',h:'Dealing with Hung-Up Toms',b:'If a gobbler hangs up out of range, go completely silent for 10–15 minutes, then offer a soft cluck and purr. Try moving laterally — gobblers often circle to find the hen rather than walk in directly.'},{c:'turkey',i:'🦃',h:'Fall Turkey Tactics',b:'Fall turkeys travel in family flocks. Scatter the flock aggressively, then set up immediately and mimic kee-kee runs and lost yelps. Birds are desperate to reassemble and come in very fast.'},{c:'waterfowl',i:'🦆',h:'Migration Timing',b:'Cold fronts push ducks south. Plan hunts 24–48 hours after a front passes when birds are actively moving and feeding. The best days follow major temperature drops early in the season.'},{c:'waterfowl',i:'🦆',h:'Decoy Spreads',b:'On rivers, use tight spreads with a landing pocket in front of your blind. On big water, use J- or C-shaped spreads into the wind. Motion decoys attract birds at distance and add confidence to your spread.'},{c:'waterfowl',i:'🦆',h:'Calling Mistakes',b:'Over-calling is the #1 mistake. Use a greeting call at distance, slow to feeding chuckles as birds circle. Silence is often best when birds are locked up with feet down. Read body language and adjust.'},{c:'elk',i:'🫎',h:'Bugling in the Rut',b:'September rut is elk hunting at its finest. Locate bulls at first light with bugles. Set up downwind and use cow calls to pull him in. Aggressive challenge bugles work on dominant bulls protecting cows.'},{c:'elk',i:'🫎',h:'Post-Rut Elk',b:'After rut, elk focus on food. Find south-facing slopes and aspen parks. North-facing timbered benches above meadows are great morning set locations. Water sources key during warm October afternoons.'},{c:'elk',i:'🫎',h:'Reading Elk Country',b:'Elk travel between high bedding and low feeding areas daily. Find transition zones on north-facing benches 200–500 yards above meadows. Look for large rubs, deeply worn trails, and massive tracks.'},{c:'predator',i:'🐺',h:'Coyote Calling',b:'Start with locator howls then transition to cottontail distress calls. Set up downwind with good visibility. Coyotes arrive fast — be ready within 30 seconds. Change calls every 3–5 minutes.'},{c:'predator',i:'🐺',h:'Best Predator Conditions',b:'Early morning and late afternoon are most productive. During Jan–Mar breeding season, challenge howls and invitation howls work extremely well. Snow forces coyotes onto roads and ridges.'},{c:'scouting',i:'🔭',h:'Using Satellite Imagery',b:'Study satellite and topo maps before entering new ground. Look for pinch points between terrain features, transition zones, and corridors along ridgelines where food, cover and water converge.'},{c:'scouting',i:'🔭',h:'Trail Camera Strategy',b:'Deploy cameras in August–September to inventory bucks. Place on scrapes, primary trails, and water sources. Check cameras downwind and infrequently — or use cellular cameras to avoid pressure.'},{c:'scouting',i:'🔭',h:'Reading Sign',b:'Fresh rubs on large-diameter trees indicate mature bucks. Multiple rubs along a line mark a travel corridor. Licking branches over scrapes are your #1 camera placement.'},{c:'scouting',i:'🔭',h:'Public Land Strategy',b:'Walk further than most hunters — typically 1.5+ miles from any trailhead. Use topo to find terrain saddles, benches, and points that hold pressured deer. Hunt where pressure pushes deer to.'}];
+let tipCat='all';
+function ftip(el){tipCat=el.dataset.c;document.querySelectorAll('.tpill').forEach(p=>p.classList.remove('on'));el.classList.add('on');renderTips();}
+function renderTips(){const list=tipCat==='all'?TIPS:TIPS.filter(t=>t.c===tipCat);document.getElementById('tout').innerHTML=list.map(t=>`<div class="tcrd"><h4>${t.i} ${t.h}</h4><p>${t.b}</p></div>`).join('');}
+// ── MOON PHASE ENGINE ──────────────────────────────────────────────────────
+function getMoonPhase(date){
+  const known=new Date(2000,0,6,18,14,0);// known new moon
+  const syn=29.53058867;// synodic period days
+  const diff=(date-known)/(1000*60*60*24);
+  let age=((diff%syn)+syn)%syn;
+  const pct=age/syn;
+  let name,emoji,huntNote;
+  if(age<1.85){name='New Moon';emoji='🌑';}
+  else if(age<7.38){name='Waxing Crescent';emoji='🌒';}
+  else if(age<9.22){name='First Quarter';emoji='🌓';}
+  else if(age<14.77){name='Waxing Gibbous';emoji='🌔';}
+  else if(age<16.61){name='Full Moon';emoji='🌕';}
+  else if(age<22.15){name='Waning Gibbous';emoji='🌖';}
+  else if(age<23.99){name='Last Quarter';emoji='🌗';}
+  else{name='Waning Crescent';emoji='🌘';}
+  const illumination=Math.round(50*(1-Math.cos(2*Math.PI*pct))*100)/100;
+  // Hunt rating
+  if(age<2||age>27.5){huntNote={rating:4,text:'New Moon — deer move freely in full darkness. Evening hunts near feed excel. Mornings can be slow but mid-morning movement picks up as light builds.'};}
+  else if(age>=2&&age<8){huntNote={rating:3,text:'Waxing Crescent — early evening activity window is strong. Deer shift to nocturnal feeding as darkness grows. Focus on pinch points at last light.'};}
+  else if(age>=8&&age<10){huntNote={rating:3,text:'First Quarter — decent daytime movement. Deer are transitioning patterns. Good time for all-day sits in staging areas between bedding and feed.'};}
+  else if(age>=10&&age<15){huntNote={rating:4,text:'Waxing Gibbous — building moon energy increases midday movement. Bucks on their feet earlier. Excellent week for extended sits in high-traffic areas.'};}
+  else if(age>=15&&age<17){huntNote={rating:5,text:'Full Moon — peak rutting activity when the rut overlaps. Deer feed heavily overnight; morning hunts near bedding are your best bet. Midday movement surges.'};}
+  else if(age>=17&&age<22){huntNote={rating:4,text:'Waning Gibbous — deer readjust after full moon feeding. Morning movement is excellent as deer return to beds late. Hit feeding-to-bedding transitions at first light.'};}
+  else{huntNote={rating:3,text:'Waning Crescent — movement normalizes. Deer patterns become more predictable again. Good conditions for stand hunting with proper wind play.'};}
+  // Next key phases
+  const phases=[];
+  const daysToNew=syn-age;
+  const daysToFull=age<14.77?(14.77-age):(syn-(age-14.77));
+  const daysToFQ=age<7.38?(7.38-age):age<36?(syn-(age-7.38)):0;
+  const daysToLQ=age<22.15?(22.15-age):(syn-(age-22.15));
+  function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+Math.round(n));return r;}
+  const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  phases.push({emoji:'🌑',name:'New Moon',date:fmt(addDays(date,daysToNew)),days:Math.round(daysToNew),active:age>27.5||age<1.85});
+  phases.push({emoji:'🌓',name:'First Quarter',date:fmt(addDays(date,daysToFQ>0?daysToFQ:daysToFQ+syn)),days:Math.round(daysToFQ>0?daysToFQ:daysToFQ+syn),active:age>=8&&age<10});
+  phases.push({emoji:'🌕',name:'Full Moon',date:fmt(addDays(date,daysToFull)),days:Math.round(daysToFull),active:age>=15&&age<17});
+  phases.push({emoji:'🌗',name:'Last Quarter',date:fmt(addDays(date,daysToLQ)),days:Math.round(daysToLQ),active:age>=22&&age<24});
+  phases.sort((a,b)=>a.days-b.days);
+  return{age:age.toFixed(1),name,emoji,illumination,huntNote,phases};
+}
+function renderMoon(){
+  const m=getMoonPhase(new Date());
+  const stars='⭐'.repeat(m.huntNote.rating)+'☆'.repeat(5-m.huntNote.rating);
+  document.getElementById('moonout').innerHTML=`
+    <div class="mooncard">
+      <div class="moonface">${m.emoji}</div>
+      <div class="moonname">${m.name}</div>
+      <div class="moonpct">${m.illumination}% illuminated · Day ${m.age} of cycle</div>
+      <div class="moongrid">
+        <div class="moonstat"><div class="moonslbl">Moon Age</div><div class="moonsval">${m.age} days</div></div>
+        <div class="moonstat"><div class="moonslbl">Illumination</div><div class="moonsval">${m.illumination}%</div></div>
+      </div>
+      <div class="moonhunt">
+        <div class="moonhtit">Hunting Outlook ${stars}</div>
+        <div class="moonhbody">${m.huntNote.text}</div>
+      </div>
+    </div>
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-top:4px">Upcoming Phases</div>
+    <div class="moonrow">${m.phases.map(p=>`
+      <div class="moonphaserow${p.active?' active':''}">
+        <span class="mpric">${p.emoji}</span>
+        <div class="mprtxt">
+          <div class="mprname">${p.name}</div>
+          <div class="mprdate">${p.date}</div>
+        </div>
+        ${p.active?'<span class="mprbadge">NOW</span>':`<span style="font-size:10px;color:var(--text-muted)">in ${p.days}d</span>`}
+      </div>`).join('')}
+    </div>`;
+}
+renderMoon();
+// ── MISSING STATES DATA ────────────────────────────────────────────────────
+const SD_EXTRA={"Alaska":{"🫎 Moose":[{t:"Archery",d:"Sep 5–Sep 25 (unit)"},{t:"Firearm",d:"Sep 5–Sep 25 (unit)"}],"🐻 Brown Bear":[{t:"Spring",d:"Apr 1–May 31"},{t:"Fall",d:"Oct 1–Oct 24"}],"🦌 Caribou":[{t:"General",d:"Aug 1–Nov 30 (unit)"}],"🦆 Waterfowl":[{t:"Duck",d:"Sep–Dec"},{t:"Goose",d:"Sep–Dec"}]},"Arizona":{"🫎 Elk":[{t:"Archery",d:"Aug 23–Sep 1"},{t:"Firearm",d:"Oct–Nov (unit/draw)"}],"🦌 Mule Deer":[{t:"Archery",d:"Aug 23–Sep 22"},{t:"Firearm",d:"Oct–Nov (unit/draw)"}],"🐗 Javelina":[{t:"General",d:"Jan 18–Feb 2"}]},"California":{"🦌 Deer":[{t:"Archery",d:"Jul–Aug (zone)"},{t:"General",d:"Aug–Oct (zone)"}],"🐻 Black Bear":[{t:"Season",d:"Aug 10–Dec 29"}],"🦃 Turkey":[{t:"Spring",d:"Mar 29–May 5"},{t:"Fall",d:"Sep 14–Jan 26"}]},"Florida":{"🦌 Whitetail":[{t:"Archery",d:"Jul 27–Oct 25"},{t:"Crossbow",d:"Jul 27–Nov 1"},{t:"Firearm",d:"Nov 2–Jan 26 (zone)"}],"🐗 Wild Hog":[{t:"Year-Round",d:"No closed season"}],"🦃 Turkey":[{t:"Spring",d:"Mar 1–Apr 20"},{t:"Osceola",d:"Mar 1–Apr 6"}]},"Louisiana":{"🦌 Whitetail":[{t:"Archery",d:"Oct 1–Nov 14"},{t:"Firearm",d:"Nov 15–Jan 15 (zone)"}],"🐗 Wild Hog":[{t:"Year-Round",d:"No closed season"}],"🦃 Turkey":[{t:"Spring",d:"Mar 22–Apr 21"}],"🦆 Waterfowl":[{t:"Duck",d:"Nov–Jan"},{t:"Goose",d:"Nov–Feb"}]},"Maine":{"🫎 Moose":[{t:"Firearm",d:"Oct (lottery draw)"}],"🦌 Whitetail":[{t:"Archery",d:"Sep 28–Oct 31"},{t:"Firearm",d:"Oct 28–Nov 23"},{t:"Muzzleloader",d:"Nov 25–Dec 7"}],"🐻 Black Bear":[{t:"Season",d:"Aug 26–Nov 23"}],"🦃 Turkey":[{t:"Spring",d:"May 1–Jun 3"}]},"Maryland":{"🦌 Whitetail":[{t:"Archery",d:"Sep 7–Jan 31"},{t:"Firearm",d:"Nov 23–Dec 7 & Dec 26–Jan 5"},{t:"Muzzleloader",d:"Oct 19–26 & Dec 9–14"}],"🦃 Turkey":[{t:"Spring",d:"Apr 19–May 20"}],"🐻 Black Bear":[{t:"Season",d:"Oct 21–26 (W. MD)"}]},"Nevada":{"🫎 Elk":[{t:"Archery",d:"Aug 10–Sep 22 (draw)"},{t:"Firearm",d:"Sep–Nov (draw)"}],"🦌 Mule Deer":[{t:"Archery",d:"Aug 10–Sep 1 (draw)"},{t:"Firearm",d:"Oct–Nov (draw)"}],"🐻 Black Bear":[{t:"Season",d:"Aug 10–Nov 9"}]},"New Mexico":{"🫎 Elk":[{t:"Archery",d:"Sep 1–Sep 22"},{t:"Firearm",d:"Oct–Nov (unit/draw)"}],"🦌 Mule Deer":[{t:"Archery",d:"Sep 1–Sep 22"},{t:"Firearm",d:"Oct–Nov (unit)"}],"🐗 Javelina":[{t:"Spring",d:"Feb 1–Mar 31"},{t:"Fall",d:"Oct 1–Nov 30"}]},"North Dakota":{"🦌 Whitetail":[{t:"Archery",d:"Sep 1–Jan 7"},{t:"Firearm",d:"Nov 8–Nov 24"}],"🦃 Turkey":[{t:"Spring",d:"Apr 7–Jun 1"},{t:"Fall",d:"Sep 1–Jan 7"}],"🦌 Mule Deer":[{t:"Archery",d:"Sep 1–Jan 7"},{t:"Firearm",d:"Nov 1–Nov 10"}]},"Oklahoma":{"🦌 Whitetail":[{t:"Archery",d:"Oct 1–Jan 15"},{t:"Firearm",d:"Nov 16–Dec 8"}],"🦃 Turkey":[{t:"Spring",d:"Apr 9–May 11"},{t:"Fall",d:"Oct 1–Nov 14"}],"🐗 Wild Hog":[{t:"Year-Round",d:"No closed season"}]},"Oregon":{"🫎 Elk":[{t:"Archery",d:"Aug 24–Sep 22"},{t:"General Rifle",d:"Oct–Nov (unit)"}],"🦌 Mule Deer":[{t:"Archery",d:"Aug 24–Sep 22"},{t:"General Rifle",d:"Oct–Nov (unit)"}],"🐻 Black Bear":[{t:"Spring",d:"Apr 1–May 31"},{t:"Fall",d:"Aug 1–Nov 30"}]},"South Dakota":{"🦌 Whitetail":[{t:"Archery",d:"Sep 14–Jan 31"},{t:"Firearm",d:"Nov 16–Dec 1"}],"🦃 Turkey":[{t:"Spring",d:"Apr 13–May 25"},{t:"Fall",d:"Sep 1–Jan 31"}],"🐦 Pheasant":[{t:"General",d:"Oct 19–Jan 31"}]},"Utah":{"🫎 Elk":[{t:"Archery",d:"Aug 17–Sep 22 (draw)"},{t:"Firearm",d:"Oct 19–Nov 3 (draw)"}],"🦌 Mule Deer":[{t:"Archery",d:"Aug 17–Sep 22"},{t:"Firearm",d:"Oct 19–Nov 3 (draw)"}],"🐻 Black Bear":[{t:"Season",d:"Aug 10–Nov 30 (draw)"}]},"Vermont":{"🦌 Whitetail":[{t:"Archery",d:"Oct 1–Nov 8 & Dec 1–Jan 15"},{t:"Muzzleloader",d:"Oct 19–27"},{t:"Firearm",d:"Nov 9–Nov 30"}],"🐻 Black Bear":[{t:"Season",d:"Sep 1–Nov 30"}],"🦃 Turkey":[{t:"Spring",d:"May 1–Jun 1"},{t:"Fall",d:"Oct 14–Nov 5"}]}};
+Object.assign(SD,SD_EXTRA);
+renderTips();
+function goTab(name,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));el.classList.add('on');document.getElementById('pane-'+name).classList.add('on');}
+function mobTab(name,el){document.querySelectorAll('.mobtab').forEach(t=>t.classList.remove('on'));el.classList.add('on');document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));document.getElementById('pane-'+name).classList.add('on');document.getElementById('sb').classList.add('open');document.getElementById('mob-fabs').style.display='none';}
+function mobShowMap(){document.querySelectorAll('.mobtab').forEach(t=>t.classList.remove('on'));document.getElementById('mnt-map').classList.add('on');document.getElementById('sb').classList.remove('open');document.getElementById('mob-fabs').style.display='flex';}
+
+</script>
+</body>
+</html>
