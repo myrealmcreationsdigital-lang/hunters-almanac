@@ -33,7 +33,7 @@ export function createMap(container) {
             'raster-contrast': 0.12,
             'raster-brightness-max': 0.78,
             'raster-fade-duration': 180,
-            'raster-resampling': 'nearest',
+            'raster-resampling': 'linear',
           },
         },
       ],
