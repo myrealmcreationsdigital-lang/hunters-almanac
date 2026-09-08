@@ -7,3 +7,11 @@ precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
 registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')));
+
+// registerType: 'autoUpdate' (vite.config.js) relies on the client posting SKIP_WAITING
+// once a new worker is installed. injectManifest strategy requires wiring that up manually,
+// otherwise an already-installed worker never activates newer builds and keeps serving a
+// stale precached app shell indefinitely.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
