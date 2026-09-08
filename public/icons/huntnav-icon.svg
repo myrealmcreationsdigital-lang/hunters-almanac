@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">HuntNav shield with antlers and eight-point star</title>
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#15241d"/><stop offset="1" stop-color="#08110e"/></linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e3c77d"/><stop offset="0.5" stop-color="#b9913d"/><stop offset="1" stop-color="#7e6028"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#field)"/>
+  <path d="M256 66 421 123v132c0 101-65 160-165 197C156 415 91 356 91 255V123Z" fill="#0b1713" stroke="url(#brass)" stroke-width="18"/>
+  <path d="M238 276c-37-18-64-47-75-85M211 256c-42-4-72-24-91-58M188 231c-32-18-49-43-52-76M274 276c37-18 64-47 75-85M301 256c42-4 72-24 91-58M324 231c32-18 49-43 52-76" fill="none" stroke="#d2b66d" stroke-linecap="round" stroke-linejoin="round" stroke-width="13"/>
+  <path d="M256 130 268 166 295 143 278 176 316 175 280 189 308 214 272 198 273 237 258 201 233 230 246 194 208 202 243 184 211 163 248 176Z" fill="url(#brass)"/>
+  <path d="M256 289c-32 0-58 20-58 49 0 34 27 58 58 75 31-17 58-41 58-75 0-29-26-49-58-49Z" fill="#16261f" stroke="#7e6028" stroke-width="8"/>
+  <path d="M256 302v87M221 337h70" stroke="#c8a45a" stroke-width="8" stroke-linecap="round" opacity=".65"/>
+</svg>
