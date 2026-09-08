@@ -15,7 +15,7 @@ function feature(objectId) {
 test('gates parcel transfer below minimum zoom', async () => {
   let called = false;
   const provider = new NysParcelProvider({ fetchImpl: async () => { called = true; } });
-  const result = await provider.queryViewport({ bbox: BBOX, zoom: 13, signal: new AbortController().signal });
+  const result = await provider.queryViewport({ bbox: BBOX, zoom: 12, signal: new AbortController().signal });
   assert.equal(result.state, 'zoom-required');
   assert.equal(called, false);
 });

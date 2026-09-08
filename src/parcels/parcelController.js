@@ -166,7 +166,7 @@ export class ParcelController {
   }
 
   #setVisibility(visibility) {
-    ['parcel-fill', 'parcel-line', 'parcel-selected-fill', 'parcel-selected-line'].forEach((layer) => {
+    ['parcel-fill', 'parcel-line-casing', 'parcel-line', 'parcel-selected-fill', 'parcel-selected-line'].forEach((layer) => {
       if (this.map.getLayer(layer)) this.map.setLayoutProperty(layer, 'visibility', visibility);
     });
   }
@@ -180,6 +180,18 @@ export class ParcelController {
       source: 'parcels',
       paint: { 'fill-color': '#d8b45c', 'fill-opacity': 0.035 },
     });
+    // Dark casing line rendered under the brass line so boundaries stay
+    // legible over light fields, dark woods, roads, and buildings alike.
+    this.map.addLayer({
+      id: 'parcel-line-casing',
+      type: 'line',
+      source: 'parcels',
+      paint: {
+        'line-color': '#140d06',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 14, 2.6, 18, 4.4],
+        'line-opacity': 0.8,
+      },
+    });
     this.map.addLayer({
       id: 'parcel-line',
       type: 'line',
@@ -187,8 +199,7 @@ export class ParcelController {
       paint: {
         'line-color': '#f0d68a',
         'line-width': ['interpolate', ['linear'], ['zoom'], 14, 1.15, 18, 2.1],
-        'line-opacity': 0.92,
-        'line-blur': 0.15,
+        'line-opacity': 0.95,
       },
     });
     this.map.addLayer({
@@ -205,5 +216,18 @@ export class ParcelController {
       filter: ['==', ['get', 'providerFeatureId'], '__none__'],
       paint: { 'line-color': '#fff0b5', 'line-width': 3, 'line-opacity': 1 },
     });
+    this.#ensureLayerOrder();
+  }
+
+  // Explicit, unmistakable guarantee that parcel layers render above the USGS
+  // raster imagery, independent of the order addLayer() happened to run in.
+  // moveLayer(id) with no beforeId moves a layer to the very top of the stack.
+  #ensureLayerOrder() {
+    const imageryIndex = this.map.getStyle().layers.findIndex((layer) => layer.id === 'usgs-imagery-layer');
+    for (const id of ['parcel-fill', 'parcel-line-casing', 'parcel-line', 'parcel-selected-fill', 'parcel-selected-line']) {
+      if (!this.map.getLayer(id)) continue;
+      const layerIndex = this.map.getStyle().layers.findIndex((layer) => layer.id === id);
+      if (layerIndex <= imageryIndex) this.map.moveLayer(id);
+    }
   }
 }
