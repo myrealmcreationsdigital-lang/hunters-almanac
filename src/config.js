@@ -14,7 +14,7 @@ export const NYS_PARCELS = {
   serviceUrl: 'https://services6.arcgis.com/EbVsqZ18sv1kVJ3k/ArcGIS/rest/services/NYS_Tax_Parcels_Public/FeatureServer/1',
   sourceUrl: 'https://gis.ny.gov/parcels',
   county: 'Steuben',
-  minZoom: 14,
+  minZoom: 13,
   pageSize: 1000,
   maxViewportFeatures: 3000,
   coverageBounds: [-77.77, 41.99, -76.94, 42.58],
