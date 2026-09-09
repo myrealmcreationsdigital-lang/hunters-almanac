@@ -3,6 +3,12 @@ import { toMapFeatureCollection } from './model.js';
 import { ViewportRequestCoordinator } from './requestCoordinator.js';
 
 const EMPTY_COLLECTION = { type: 'FeatureCollection', features: [] };
+const OBSOLETE_CLEAR_STATES = new Set([
+  PARCEL_STATES.EMPTY,
+  PARCEL_STATES.UNAVAILABLE,
+  PARCEL_STATES.TOO_DENSE,
+  PARCEL_STATES.ERROR,
+]);
 
 function viewport(map) {
   const bounds = map.getBounds();
@@ -27,7 +33,7 @@ export function collectRenderedParcels(renderedFeatures, parcelsById) {
 }
 
 export class ParcelController {
-  constructor({ map, provider, onState, onSelection }) {
+  constructor({ map, provider, onState, onSelection, requestDelay = 300 }) {
     this.map = map;
     this.provider = provider;
     this.onState = onState;
@@ -35,18 +41,16 @@ export class ParcelController {
     this.enabled = true;
     this.parcels = new Map();
     this.coordinator = new ViewportRequestCoordinator({
-      delay: 300,
-      onRun: (payload, signal) => this.#load(payload, signal),
+      delay: requestDelay,
+      onRun: (payload, signal, context) => this.#load(payload, signal, context),
     });
 
-    this.onMoveStart = () => this.coordinator.abortActive();
     this.onMoveEnd = () => this.refresh();
     this.onMapClick = (event) => this.#select(event);
   }
 
   start() {
     this.#ensureLayers();
-    this.map.on('movestart', this.onMoveStart);
     this.map.on('moveend', this.onMoveEnd);
     this.map.on('click', this.onMapClick);
     this.map.on('mouseenter', 'parcel-fill', () => {
@@ -97,7 +101,7 @@ export class ParcelController {
     this.map.setFilter('parcel-selected-line', filter);
   }
 
-  async #load({ bbox, zoom }, signal) {
+  async #load({ bbox, zoom }, signal, { hasPending }) {
     this.onState({ state: PARCEL_STATES.LOADING, message: 'Loading property lines…' });
     try {
       const result = await this.provider.queryViewport({ bbox, zoom, signal });
@@ -127,10 +131,12 @@ export class ParcelController {
       } else if (result.state === PARCEL_STATES.UNAVAILABLE) {
         message = 'Public parcel data unavailable for this area';
       }
+      if (hasPending() && OBSOLETE_CLEAR_STATES.has(result.state)) return;
       this.#clearForState(result.state, message);
     } catch (error) {
       if (error.name === 'AbortError' || signal.aborted) return;
       const state = navigator.onLine ? PARCEL_STATES.ERROR : PARCEL_STATES.OFFLINE;
+      if (hasPending() && OBSOLETE_CLEAR_STATES.has(state)) return;
       this.#clearForState(
         state,
         state === PARCEL_STATES.OFFLINE
