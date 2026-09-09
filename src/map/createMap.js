@@ -1,5 +1,8 @@
-import { AttributionControl, Map } from 'maplibre-gl';
+import { AttributionControl, Map, setWorkerUrl } from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { INITIAL_VIEW, USGS_IMAGERY } from '../config.js';
+
+setWorkerUrl(maplibreWorkerUrl);
 
 export function createMap(container) {
   const map = new Map({
