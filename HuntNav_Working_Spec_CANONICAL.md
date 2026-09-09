@@ -595,6 +595,7 @@ Not part of the initial v0.1 requirement unless specifically promoted:
 - Multi-user land management
 - Advanced offline map packs
 - Automated parcel-boundary proximity alerts
+- Parcel viewport refresh refinement: retain the currently rendered parcel geometry while the replacement viewport query loads, then swap to the new geometry only when that query is ready.
 
 ---
 
