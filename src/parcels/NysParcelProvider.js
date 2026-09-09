@@ -14,7 +14,7 @@ function intersects([west, south, east, north], [coverageWest, coverageSouth, co
 
 function baseParams(bbox) {
   return {
-    where: `COUNTY_NAME='${NYS_PARCELS.county}'`,
+    where: '1=1',
     geometry: bbox.join(','),
     geometryType: 'esriGeometryEnvelope',
     inSR: '4326',
@@ -32,7 +32,7 @@ export class NysParcelProvider extends ParcelProvider {
     return {
       id: NYS_PARCELS.providerId,
       name: 'NYS Public Tax Parcels',
-      jurisdiction: { country: 'US', subdivision: 'NY', county: NYS_PARCELS.county },
+      jurisdiction: { country: 'US', subdivision: 'NY' },
       sourceUrl: NYS_PARCELS.sourceUrl,
       minimumZoom: NYS_PARCELS.minZoom,
       capabilities: {
@@ -64,7 +64,14 @@ export class NysParcelProvider extends ParcelProvider {
     }
 
     const count = await this.#fetchCount({ bbox, signal });
-    if (count === 0) return { state: PARCEL_STATES.EMPTY, count, parcels: [] };
+    if (count === 0) {
+      const coverageCount = await this.#fetchCoverageCount({ bbox, signal });
+      return {
+        state: coverageCount > 0 ? PARCEL_STATES.EMPTY : PARCEL_STATES.UNAVAILABLE,
+        count,
+        parcels: [],
+      };
+    }
     if (count > NYS_PARCELS.maxViewportFeatures) {
       return {
         state: PARCEL_STATES.TOO_DENSE,
@@ -88,7 +95,7 @@ export class NysParcelProvider extends ParcelProvider {
 
   async identifyAt({ longitude, latitude, signal }) {
     const params = new URLSearchParams({
-      where: `COUNTY_NAME='${NYS_PARCELS.county}'`,
+      where: '1=1',
       geometry: `${longitude},${latitude}`,
       geometryType: 'esriGeometryPoint',
       inSR: '4326',
@@ -113,6 +120,17 @@ export class NysParcelProvider extends ParcelProvider {
       f: 'json',
     });
     const data = await this.#request(`${NYS_PARCELS.serviceUrl}/query?${params}`, signal);
+    return Number(data.count ?? 0);
+  }
+
+  async #fetchCoverageCount({ bbox, signal }) {
+    const params = new URLSearchParams({
+      ...baseParams(bbox),
+      returnGeometry: 'false',
+      returnCountOnly: 'true',
+      f: 'json',
+    });
+    const data = await this.#request(`${NYS_PARCELS.publicCoverageUrl}/query?${params}`, signal);
     return Number(data.count ?? 0);
   }
 

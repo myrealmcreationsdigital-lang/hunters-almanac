@@ -125,7 +125,7 @@ export class ParcelController {
       } else if (result.state === PARCEL_STATES.EMPTY) {
         message = 'No parcels found in this view';
       } else if (result.state === PARCEL_STATES.UNAVAILABLE) {
-        message = 'Parcel source covers Steuben County only';
+        message = 'Public parcel data unavailable for this area';
       }
       this.#clearForState(result.state, message);
     } catch (error) {
