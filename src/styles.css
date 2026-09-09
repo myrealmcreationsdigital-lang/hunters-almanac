@@ -257,6 +257,7 @@ button { font: inherit; }
 .map-message {
   position: absolute;
   z-index: 30;
+  pointer-events: none;
   top: calc(151px + env(safe-area-inset-top));
   left: 50%;
   max-width: min(420px, calc(100vw - 32px));

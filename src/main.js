@@ -34,6 +34,9 @@ const elements = {
 let selection = [];
 let selectionIndex = 0;
 let parcelController;
+let parcelDiagnosticSequence = 0;
+const parcelDiagnostics = [];
+globalThis.huntNavParcelDiagnostics = parcelDiagnostics;
 
 function showMessage(message, timeout = 3500) {
   elements.message.textContent = message;
@@ -68,6 +71,15 @@ function renderLocationState({ state, message }) {
 function renderParcelState({ state, message }) {
   elements.parcelStatus.textContent = message;
   elements.parcelToggle.dataset.state = state;
+}
+
+function renderParcelDiagnostic(diagnostic) {
+  parcelDiagnosticSequence += 1;
+  const entry = { sequence: parcelDiagnosticSequence, ...diagnostic };
+  parcelDiagnostics.push(entry);
+  if (parcelDiagnostics.length > 50) parcelDiagnostics.shift();
+  globalThis.huntNavLastParcelDiagnostic = entry;
+  console.info(`[HuntNav parcel diagnostic #${entry.sequence}]`, entry);
 }
 
 function formatAcreage(value, basis) {
@@ -137,6 +149,7 @@ map.on('load', () => {
     provider: parcelProvider,
     onState: renderParcelState,
     onSelection: renderSelection,
+    onDiagnostic: renderParcelDiagnostic,
   });
   parcelController.start();
 });
@@ -159,7 +172,7 @@ elements.parcelToggle.addEventListener('click', () => {
 });
 elements.bearingReset.addEventListener('click', () => map.resetNorth({ duration: 500 }));
 elements.recenter.addEventListener('click', () => locationTracker.recenter());
-elements.panelClose.addEventListener('click', () => parcelController?.clearSelection());
+elements.panelClose.addEventListener('click', () => parcelController?.clearSelection('panel-close-button'));
 elements.recordPrev.addEventListener('click', () => {
   selectionIndex = Math.max(0, selectionIndex - 1);
   renderSelectedRecord();

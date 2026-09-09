@@ -1,8 +1,10 @@
 import { PARCEL_STATES } from './ParcelProvider.js';
+import { classifyPointInGeometry } from './geometry.js';
 import { toMapFeatureCollection } from './model.js';
 import { ViewportRequestCoordinator } from './requestCoordinator.js';
 
 const EMPTY_COLLECTION = { type: 'FeatureCollection', features: [] };
+const PARCEL_TOUCH_TOLERANCE = 8;
 const OBSOLETE_CLEAR_STATES = new Set([
   PARCEL_STATES.EMPTY,
   PARCEL_STATES.UNAVAILABLE,
@@ -15,14 +17,17 @@ function viewport(map) {
   return [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
 }
 
-export function collectRenderedParcels(renderedFeatures, parcelsById) {
+export function collectRenderedParcels(renderedFeatures, ...parcelLookups) {
   const seenIds = new Set();
   const selected = [];
 
   for (const feature of renderedFeatures) {
     const id = String(feature.properties?.providerFeatureId ?? '');
     if (!id || seenIds.has(id)) continue;
-    const parcel = parcelsById.get(id);
+    const parcel = parcelLookups.reduce(
+      (match, parcelsById) => match ?? parcelsById.get(id),
+      null,
+    );
     if (parcel) {
       seenIds.add(id);
       selected.push(parcel);
@@ -33,25 +38,36 @@ export function collectRenderedParcels(renderedFeatures, parcelsById) {
 }
 
 export class ParcelController {
-  constructor({ map, provider, onState, onSelection, requestDelay = 300 }) {
+  constructor({ map, provider, onState, onSelection, onDiagnostic = () => {}, requestDelay = 300 }) {
     this.map = map;
     this.provider = provider;
     this.onState = onState;
     this.onSelection = onSelection;
+    this.onDiagnostic = onDiagnostic;
     this.enabled = true;
     this.parcels = new Map();
+    this.previousParcels = new Map();
+    this.selectedProviderFeatureIds = [];
+    this.pendingTap = null;
+    this.sourceRevision = 0;
+    this.mapIdle = false;
+    this.sourceHandoffInFlight = false;
     this.coordinator = new ViewportRequestCoordinator({
       delay: requestDelay,
       onRun: (payload, signal, context) => this.#load(payload, signal, context),
     });
 
     this.onMoveEnd = () => this.refresh();
+    this.onMoveStart = () => { this.mapIdle = false; };
+    this.onMapIdle = () => { this.mapIdle = true; };
     this.onMapClick = (event) => this.#select(event);
   }
 
   start() {
     this.#ensureLayers();
+    this.map.on('movestart', this.onMoveStart);
     this.map.on('moveend', this.onMoveEnd);
+    this.map.on('idle', this.onMapIdle);
     this.map.on('click', this.onMapClick);
     this.map.on('mouseenter', 'parcel-fill', () => {
       this.map.getCanvas().style.cursor = 'pointer';
@@ -68,10 +84,13 @@ export class ParcelController {
     this.#setVisibility(enabled ? 'visible' : 'none');
 
     if (!enabled) {
+      this.sourceRevision += 1;
+      this.sourceHandoffInFlight = false;
       this.#setData(EMPTY_COLLECTION);
       this.parcels.clear();
+      this.previousParcels.clear();
       this.onState({ state: 'off', message: 'Property lines off' });
-      this.clearSelection();
+      this.clearSelection('property-lines-disabled');
       return;
     }
     this.refresh();
@@ -86,13 +105,22 @@ export class ParcelController {
     this.coordinator.schedule({ bbox: viewport(this.map), zoom: this.map.getZoom() });
   }
 
-  clearSelection() {
+  clearSelection(reason = 'external-clear-selection', diagnostic = null) {
+    const { runtime, ...diagnosticDetails } = diagnostic ?? {};
+    this.selectedProviderFeatureIds = [];
+    this.pendingTap = null;
     if (this.map.getLayer('parcel-selected-fill')) {
       const emptyFilter = ['==', ['get', 'providerFeatureId'], '__none__'];
       this.map.setFilter('parcel-selected-fill', emptyFilter);
       this.map.setFilter('parcel-selected-line', emptyFilter);
     }
     this.onSelection([]);
+    this.#emitDiagnostic({
+      kind: diagnostic?.kind ?? 'selection-clear',
+      ...diagnosticDetails,
+      action: 'cleared',
+      clearReason: reason,
+    }, runtime);
   }
 
   selectRecord(providerFeatureId) {
@@ -108,10 +136,15 @@ export class ParcelController {
       if (signal.aborted) return;
 
       if (result.state === PARCEL_STATES.READY) {
-        this.parcels = new Map(
+        const nextParcels = new Map(
           result.parcels.map((parcel) => [String(parcel.properties.providerFeatureId), parcel]),
         );
+        this.previousParcels = this.parcels;
+        this.parcels = nextParcels;
+        this.sourceHandoffInFlight = true;
+        this.mapIdle = false;
         this.#setData(toMapFeatureCollection(result.parcels));
+        this.#validateSelectionAfterRender();
         this.onState({
           state: PARCEL_STATES.READY,
           count: result.parcels.length,
@@ -147,24 +180,352 @@ export class ParcelController {
   }
 
   #clearForState(state, message) {
+    this.sourceRevision += 1;
+    this.sourceHandoffInFlight = false;
     this.#setData(EMPTY_COLLECTION);
     this.parcels.clear();
-    this.clearSelection();
+    this.previousParcels.clear();
+    this.clearSelection(`terminal-parcel-state:${state}`, {
+      kind: 'terminal-state-clear',
+      terminalState: state,
+      terminalMessage: message,
+    });
     this.onState({ state, message });
   }
 
-  #select(event) {
+  #select(event, { retry = false } = {}) {
     if (!this.enabled) return;
-    const rendered = this.map.queryRenderedFeatures(event.point, { layers: ['parcel-fill'] });
-    const selected = collectRenderedParcels(rendered, this.parcels);
-
-    if (!selected.length) {
-      this.clearSelection();
+    if (!retry) this.pendingTap = null;
+    const kind = retry ? 'map-tap-retry' : 'map-tap';
+    const runtime = this.#runtimeState();
+    const exact = this.#queryParcels(event.point);
+    if (exact.selected.length) {
+      const action = this.#applySelection(exact.selected);
+      this.#emitDiagnostic({
+        kind,
+        exact: exact.diagnostic,
+        geographic: null,
+        tolerance: null,
+        ambiguous: false,
+        action,
+        clearReason: null,
+      }, runtime);
       return;
     }
 
-    this.selectRecord(selected[0].properties.providerFeatureId);
+    const geographic = this.#queryGeographicParcels(event.lngLat);
+    if (geographic.selected === null) {
+      this.#emitDiagnostic({
+        kind,
+        exact: exact.diagnostic,
+        geographic: geographic.diagnostic,
+        tolerance: null,
+        ambiguous: true,
+        action: 'preserved',
+        clearReason: null,
+      }, runtime);
+      return;
+    }
+
+    if (geographic.selected.length) {
+      const action = this.#applySelection(geographic.selected);
+      this.#emitDiagnostic({
+        kind,
+        exact: exact.diagnostic,
+        geographic: geographic.diagnostic,
+        tolerance: null,
+        ambiguous: geographic.ambiguous,
+        action,
+        clearReason: null,
+      }, runtime);
+      return;
+    }
+
+    const { x, y } = event.point;
+    const toleranceBox = [
+      [x - PARCEL_TOUCH_TOLERANCE, y - PARCEL_TOUCH_TOLERANCE],
+      [x + PARCEL_TOUCH_TOLERANCE, y + PARCEL_TOUCH_TOLERANCE],
+    ];
+    const tolerance = this.#queryParcels(toleranceBox);
+    const resolvedTolerance = this.#resolveToleranceCandidates(tolerance.selected);
+    if (resolvedTolerance.selected === null) {
+      this.#emitDiagnostic({
+        kind,
+        exact: exact.diagnostic,
+        geographic: geographic.diagnostic,
+        tolerance: tolerance.diagnostic,
+        ambiguous: true,
+        action: 'preserved',
+        clearReason: null,
+      }, runtime);
+      return;
+    }
+
+    if (!resolvedTolerance.selected.length) {
+      const renderedCount = exact.diagnostic.renderedFeatureCount
+        + tolerance.diagnostic.renderedFeatureCount;
+      if (!retry && runtime.refreshInFlight) {
+        this.pendingTap = this.#retainTap(event);
+        this.#emitDiagnostic({
+          kind,
+          exact: exact.diagnostic,
+          geographic: geographic.diagnostic,
+          tolerance: tolerance.diagnostic,
+          ambiguous: false,
+          action: 'preserved',
+          clearReason: null,
+          retryPending: true,
+        }, runtime);
+        return;
+      }
+      const reason = renderedCount
+        ? `${kind}-rendered-feature-ids-unresolved`
+        : `${kind}-no-rendered-parcel-features`;
+      this.clearSelection(reason, {
+        kind,
+        runtime,
+        exact: exact.diagnostic,
+        geographic: geographic.diagnostic,
+        tolerance: tolerance.diagnostic,
+        ambiguous: false,
+      });
+      return;
+    }
+
+    const action = this.#applySelection(resolvedTolerance.selected);
+    this.#emitDiagnostic({
+      kind,
+      exact: exact.diagnostic,
+      geographic: geographic.diagnostic,
+      tolerance: tolerance.diagnostic,
+      ambiguous: resolvedTolerance.ambiguous,
+      action,
+      clearReason: null,
+    }, runtime);
+  }
+
+  #queryParcels(geometry) {
+    const rendered = this.map.queryRenderedFeatures(geometry, { layers: ['parcel-fill'] });
+    const resolutions = [];
+    const seenIds = new Set();
+    for (const feature of rendered) {
+      const id = String(feature.properties?.providerFeatureId ?? '');
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      resolutions.push({
+        id: id || '(missing)',
+        current: Boolean(id && this.parcels.has(id)),
+        previous: Boolean(id && this.previousParcels.has(id)),
+      });
+    }
+    return {
+      selected: collectRenderedParcels(rendered, this.parcels, this.previousParcels),
+      diagnostic: {
+        renderedFeatureCount: rendered.length,
+        returnedFeatureIds: rendered.map((feature) => String(
+          feature.properties?.providerFeatureId ?? '(missing)',
+        )),
+        resolutions,
+      },
+    };
+  }
+
+  #queryGeographicParcels(lngLat) {
+    const point = [Number(lngLat?.lng), Number(lngLat?.lat)];
+    if (!Number.isFinite(point[0]) || !Number.isFinite(point[1])) {
+      return {
+        selected: [],
+        ambiguous: false,
+        diagnostic: {
+          relation: 'unavailable',
+          lookup: 'none',
+          insideFeatureIds: [],
+          boundaryFeatureIds: [],
+        },
+      };
+    }
+
+    const current = this.#classifyParcelLookup(point, this.parcels);
+    const currentResolution = this.#resolveGeographicCandidates(current);
+    if (currentResolution.relation !== 'outside') {
+      return {
+        ...currentResolution,
+        diagnostic: this.#geographicDiagnostic(currentResolution, 'current'),
+      };
+    }
+
+    if (this.sourceHandoffInFlight) {
+      const previous = this.#classifyParcelLookup(point, this.previousParcels);
+      const previousResolution = this.#resolveGeographicCandidates(previous);
+      if (previousResolution.relation !== 'outside') {
+        return {
+          ...previousResolution,
+          diagnostic: this.#geographicDiagnostic(previousResolution, 'previous'),
+        };
+      }
+    }
+
+    return {
+      selected: [],
+      ambiguous: false,
+      relation: 'outside',
+      inside: [],
+      boundary: [],
+      diagnostic: {
+        relation: 'outside',
+        lookup: 'none',
+        insideFeatureIds: [],
+        boundaryFeatureIds: [],
+      },
+    };
+  }
+
+  #classifyParcelLookup(point, parcelLookup) {
+    const inside = [];
+    const boundary = [];
+    for (const parcel of parcelLookup.values()) {
+      const relation = classifyPointInGeometry(point, parcel.geometry);
+      if (relation === 'inside') inside.push(parcel);
+      else if (relation === 'boundary') boundary.push(parcel);
+    }
+    return { inside, boundary };
+  }
+
+  #resolveGeographicCandidates({ inside, boundary }) {
+    if (inside.length) {
+      return { selected: inside, ambiguous: false, relation: 'inside', inside, boundary };
+    }
+    if (!boundary.length) {
+      return { selected: [], ambiguous: false, relation: 'outside', inside, boundary };
+    }
+    if (boundary.length === 1) {
+      return { selected: boundary, ambiguous: false, relation: 'boundary', inside, boundary };
+    }
+
+    const resolvedBoundary = this.#resolveToleranceCandidates(boundary);
+    return {
+      selected: resolvedBoundary.selected,
+      ambiguous: resolvedBoundary.ambiguous,
+      relation: 'boundary',
+      inside,
+      boundary,
+    };
+  }
+
+  #geographicDiagnostic(result, lookup) {
+    const ids = (parcels) => parcels.map((parcel) => String(parcel.properties.providerFeatureId));
+    return {
+      relation: result.relation,
+      lookup,
+      insideFeatureIds: ids(result.inside),
+      boundaryFeatureIds: ids(result.boundary),
+    };
+  }
+
+  #retainTap(event) {
+    let lngLat = event.lngLat
+      ? { lng: Number(event.lngLat.lng), lat: Number(event.lngLat.lat) }
+      : null;
+    if (!lngLat && typeof this.map.unproject === 'function') {
+      const unprojected = this.map.unproject(event.point);
+      lngLat = { lng: Number(unprojected.lng), lat: Number(unprojected.lat) };
+    }
+    return {
+      lngLat,
+      point: { x: event.point.x, y: event.point.y },
+    };
+  }
+
+  #retryPendingTap() {
+    if (!this.pendingTap || this.#runtimeState().refreshInFlight) return false;
+    const pendingTap = this.pendingTap;
+    this.pendingTap = null;
+    const point = pendingTap.lngLat && typeof this.map.project === 'function'
+      ? this.map.project(pendingTap.lngLat)
+      : pendingTap.point;
+    this.#select({ point, lngLat: pendingTap.lngLat }, { retry: true });
+    return true;
+  }
+
+  #resolveToleranceCandidates(candidates) {
+    if (candidates.length < 2) return { selected: candidates, ambiguous: false };
+
+    const geometryGroups = new Map();
+    for (const parcel of candidates) {
+      const key = JSON.stringify(parcel.geometry);
+      const group = geometryGroups.get(key) ?? [];
+      group.push(parcel);
+      geometryGroups.set(key, group);
+    }
+    if (geometryGroups.size === 1) return { selected: candidates, ambiguous: false };
+
+    return {
+      selected: [...geometryGroups.values()].find((group) => group.some((parcel) => (
+        this.selectedProviderFeatureIds.includes(String(parcel.properties.providerFeatureId))
+      ))) ?? null,
+      ambiguous: true,
+    };
+  }
+
+  #applySelection(selected) {
+    const providerFeatureIds = selected.map((parcel) => String(parcel.properties.providerFeatureId));
+    const unchanged = providerFeatureIds.length === this.selectedProviderFeatureIds.length
+      && providerFeatureIds.every((id, index) => id === this.selectedProviderFeatureIds[index]);
+    if (unchanged) return 'preserved';
+
+    this.selectedProviderFeatureIds = providerFeatureIds;
+    this.selectRecord(providerFeatureIds[0]);
     this.onSelection(selected);
+    return 'replaced';
+  }
+
+  #validateSelectionAfterRender() {
+    const revision = ++this.sourceRevision;
+    const validate = () => {
+      if (revision !== this.sourceRevision) return;
+      this.previousParcels = new Map();
+      this.sourceHandoffInFlight = false;
+      if (this.#runtimeState().refreshInFlight) return;
+      if (this.#retryPendingTap()) return;
+      if (!this.selectedProviderFeatureIds.length) return;
+
+      const currentSelection = this.selectedProviderFeatureIds
+        .map((id) => this.parcels.get(id))
+        .filter(Boolean);
+      if (!currentSelection.length) {
+        this.clearSelection('refresh-reconciliation-selection-not-in-current-source');
+        return;
+      }
+      if (currentSelection.length !== this.selectedProviderFeatureIds.length) {
+        this.#applySelection(currentSelection);
+      }
+    };
+
+    if (typeof this.map.once === 'function') this.map.once('idle', validate);
+    else validate();
+  }
+
+  #runtimeState() {
+    const requestActive = Boolean(this.coordinator.controller);
+    const refreshScheduled = this.coordinator.timer !== null || this.coordinator.hasPendingPayload;
+    let mapIdle = this.mapIdle;
+    if (typeof this.map.loaded === 'function') mapIdle = mapIdle && this.map.loaded();
+    if (typeof this.map.isMoving === 'function') mapIdle = mapIdle && !this.map.isMoving();
+    return {
+      refreshInFlight: requestActive || refreshScheduled || this.sourceHandoffInFlight,
+      requestActive,
+      refreshScheduled,
+      sourceHandoffInFlight: this.sourceHandoffInFlight,
+      mapIdle,
+    };
+  }
+
+  #emitDiagnostic(diagnostic, runtime = this.#runtimeState()) {
+    this.onDiagnostic({
+      timestamp: new Date().toISOString(),
+      ...runtime,
+      ...diagnostic,
+    });
   }
 
   #setData(data) {
