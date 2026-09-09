@@ -128,7 +128,10 @@ const map = createMap('map');
 const locationTracker = new LocationTracker({ map, onState: renderLocationState });
 const parcelProvider = new NysParcelProvider();
 
+locationTracker.start();
+
 map.on('load', () => {
+  locationTracker.markMapReady();
   parcelController = new ParcelController({
     map,
     provider: parcelProvider,
@@ -136,7 +139,6 @@ map.on('load', () => {
     onSelection: renderSelection,
   });
   parcelController.start();
-  locationTracker.start();
 });
 
 map.on('rotate', () => {

@@ -34,13 +34,16 @@ function locationErrorMessage(error) {
 }
 
 export class LocationTracker {
-  constructor({ map, onState }) {
+  constructor({ map, onState, MarkerClass = Marker }) {
     this.map = map;
     this.onState = onState;
+    this.MarkerClass = MarkerClass;
     this.watchId = null;
     this.marker = null;
     this.position = null;
-    this.pendingRecenter = false;
+    this.startupPosition = null;
+    this.pendingRecenter = true;
+    this.isMapReady = false;
   }
 
   start() {
@@ -59,14 +62,17 @@ export class LocationTracker {
   }
 
   recenter() {
-    if (!this.position) {
+    if (!this.position || !this.isMapReady) {
       this.pendingRecenter = true;
       this.start();
-      this.onState({ state: 'requesting', message: 'Waiting for a GPS fix…' });
       return false;
     }
 
-    const { longitude, latitude } = this.position.coords;
+    return this.#centerOnPosition(this.position);
+  }
+
+  #centerOnPosition(position) {
+    const { longitude, latitude } = position.coords;
     this.map.easeTo({
       center: [longitude, latitude],
       zoom: Math.max(this.map.getZoom(), 15),
@@ -80,6 +86,12 @@ export class LocationTracker {
       navigator.geolocation.clearWatch(this.watchId);
     }
     this.watchId = null;
+  }
+
+  markMapReady() {
+    if (this.isMapReady) return;
+    this.isMapReady = true;
+    if (this.position) this.#renderPosition(this.position);
   }
 
   #ensureMapLayers() {
@@ -102,24 +114,14 @@ export class LocationTracker {
       element.className = 'gps-marker';
       element.innerHTML = '<span></span>';
       element.setAttribute('aria-label', 'Current GPS position');
-      this.marker = new Marker({ element, anchor: 'center' });
+      this.marker = new this.MarkerClass({ element, anchor: 'center' });
     }
   }
 
   #onPosition(position) {
     this.position = position;
-    const { longitude, latitude, accuracy } = position.coords;
-
-    if (!this.map.loaded()) {
-      this.map.once('load', () => this.#onPosition(position));
-      return;
-    }
-
-    this.#ensureMapLayers();
-    this.marker.setLngLat([longitude, latitude]).addTo(this.map);
-    this.map.getSource('gps-accuracy').setData(
-      accuracyPolygon(longitude, latitude, Math.max(accuracy, 1)),
-    );
+    if (this.pendingRecenter && !this.startupPosition) this.startupPosition = position;
+    const { accuracy } = position.coords;
 
     const roundedAccuracy = Math.round(accuracy);
     this.onState({
@@ -128,13 +130,28 @@ export class LocationTracker {
       accuracy: roundedAccuracy,
     });
 
+    if (this.isMapReady) this.#renderPosition(position);
+  }
+
+  #renderPosition(position) {
+    const { longitude, latitude, accuracy } = position.coords;
+
+    this.#ensureMapLayers();
+    this.marker.setLngLat([longitude, latitude]).addTo(this.map);
+    this.map.getSource('gps-accuracy').setData(
+      accuracyPolygon(longitude, latitude, Math.max(accuracy, 1)),
+    );
+
     if (this.pendingRecenter) {
-      this.pendingRecenter = false;
-      this.recenter();
+      if (this.#centerOnPosition(this.startupPosition ?? position)) {
+        this.pendingRecenter = false;
+        this.startupPosition = null;
+      }
     }
   }
 
   #onError(error) {
+    if (error?.code === error?.PERMISSION_DENIED) this.watchId = null;
     this.onState({ state: 'error', message: locationErrorMessage(error), error });
   }
 }
