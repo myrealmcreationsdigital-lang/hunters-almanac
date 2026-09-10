@@ -31,16 +31,30 @@
         <div id="map" class="map" aria-label="Interactive HuntNav map"></div>
         <div class="map-vignette" aria-hidden="true"></div>
 
-        <section class="parcel-toggle-card" aria-label="Property boundary controls">
-          <button id="parcel-toggle" class="layer-toggle" type="button" aria-pressed="true">
-            <span class="layer-toggle__icon" aria-hidden="true"></span>
-            <span>
-              <strong>PROPERTY LINES</strong>
-              <small id="parcel-status">Preparing parcel source…</small>
-            </span>
-            <span class="switch" aria-hidden="true"><span></span></span>
+        <div class="layers-control">
+          <button id="layers-button" class="map-control layers-button" type="button" title="Map layers" aria-label="Map layers" aria-controls="layers-panel" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5-8 4.5-8-4.5L12 3Z"></path><path d="m4 12 8 4.5 8-4.5M4 16.5l8 4.5 8-4.5"></path></svg>
           </button>
-        </section>
+          <section id="layers-panel" class="layers-panel" aria-labelledby="layers-panel-title" hidden inert>
+            <div class="layers-panel__header">
+              <div>
+                <p class="eyebrow">MAP SETTINGS</p>
+                <h2 id="layers-panel-title">Map Layers</h2>
+              </div>
+              <button id="layers-close" class="icon-button" type="button" aria-label="Close map layers">×</button>
+            </div>
+            <div class="layers-panel__list">
+              <button id="parcel-toggle" class="layer-toggle" type="button" aria-pressed="true">
+                <span class="layer-toggle__icon" aria-hidden="true"></span>
+                <span class="layer-toggle__label">
+                  <strong>Property Lines</strong>
+                  <small id="parcel-status">Preparing parcel source…</small>
+                </span>
+                <span class="switch" aria-hidden="true"><span></span></span>
+              </button>
+            </div>
+          </section>
+        </div>
 
         <div class="map-controls" aria-label="Map controls">
           <button id="bearing-reset" class="map-control bearing-control" type="button" title="Reset bearing to north" aria-label="Reset bearing to north">
@@ -58,8 +72,10 @@
         </div>
         <div id="map-message" class="map-message" role="status" aria-live="polite" hidden></div>
 
-        <aside id="parcel-panel" class="parcel-panel" aria-labelledby="parcel-panel-title" aria-hidden="true">
-          <div class="parcel-panel__handle" aria-hidden="true"></div>
+        <aside id="parcel-panel" class="parcel-panel" aria-labelledby="parcel-panel-title" aria-hidden="true" data-state="closed" hidden inert>
+          <button id="parcel-panel-handle" class="parcel-panel__handle" type="button" aria-controls="parcel-panel-expanded" aria-expanded="false" aria-label="Expand parcel details">
+            <span class="parcel-panel__grabber" aria-hidden="true"></span>
+          </button>
           <div class="parcel-panel__header">
             <div>
               <p class="eyebrow">SELECTED PROPERTY</p>
@@ -68,19 +84,23 @@
             <button id="parcel-panel-close" class="icon-button" type="button" aria-label="Close parcel details">×</button>
           </div>
           <div id="parcel-record-nav" class="record-nav" hidden>
-            <button id="parcel-record-prev" type="button" aria-label="Previous coincident parcel">‹</button>
+            <button id="parcel-record-prev" type="button" aria-label="Previous parcel record">‹</button>
             <span id="parcel-record-count"></span>
-            <button id="parcel-record-next" type="button" aria-label="Next coincident parcel">›</button>
+            <button id="parcel-record-next" type="button" aria-label="Next parcel record">›</button>
           </div>
-          <dl class="parcel-facts">
+          <dl class="parcel-facts parcel-facts--primary">
             <div><dt>Owner</dt><dd id="parcel-owner">—</dd></div>
             <div><dt>Acreage</dt><dd id="parcel-acreage">—</dd></div>
-            <div><dt>Parcel ID</dt><dd id="parcel-id">—</dd></div>
-            <div><dt>Jurisdiction</dt><dd id="parcel-jurisdiction">—</dd></div>
-            <div><dt>Data year</dt><dd id="parcel-year">—</dd></div>
-            <div><dt>Source</dt><dd><a id="parcel-source" href="https://gis.ny.gov/parcels" target="_blank" rel="noreferrer">NYS ITS Geospatial Services</a></dd></div>
+            <div><dt>Parcel ID / SBL</dt><dd id="parcel-id">—</dd></div>
           </dl>
-          <p class="parcel-disclaimer">Property lines are for planning and general use only. They are not a legal survey. Source data may be incomplete, inaccurate, or out of date.</p>
+          <div id="parcel-panel-expanded" class="parcel-panel__expanded" hidden inert>
+            <dl class="parcel-facts parcel-facts--secondary">
+              <div><dt>Jurisdiction</dt><dd id="parcel-jurisdiction">—</dd></div>
+              <div><dt>Data year</dt><dd id="parcel-year">—</dd></div>
+              <div><dt>Source</dt><dd><a id="parcel-source" href="https://gis.ny.gov/parcels" target="_blank" rel="noreferrer">NYS ITS Geospatial Services</a></dd></div>
+            </dl>
+            <p class="parcel-disclaimer">Property lines are for planning and general use only. They are not a legal survey. Source data may be incomplete, inaccurate, or out of date.</p>
+          </div>
         </aside>
       </main>
     </div>

@@ -38,13 +38,21 @@ export function collectRenderedParcels(renderedFeatures, ...parcelLookups) {
 }
 
 export class ParcelController {
-  constructor({ map, provider, onState, onSelection, onDiagnostic = () => {}, requestDelay = 300 }) {
+  constructor({
+    map,
+    provider,
+    onState,
+    onSelection,
+    onDiagnostic = () => {},
+    requestDelay = 300,
+    enabled = true,
+  }) {
     this.map = map;
     this.provider = provider;
     this.onState = onState;
     this.onSelection = onSelection;
     this.onDiagnostic = onDiagnostic;
-    this.enabled = true;
+    this.enabled = enabled;
     this.parcels = new Map();
     this.previousParcels = new Map();
     this.selectedProviderFeatureIds = [];
@@ -65,6 +73,7 @@ export class ParcelController {
 
   start() {
     this.#ensureLayers();
+    this.#setVisibility(this.enabled ? 'visible' : 'none');
     this.map.on('movestart', this.onMoveStart);
     this.map.on('moveend', this.onMoveEnd);
     this.map.on('idle', this.onMapIdle);

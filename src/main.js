@@ -5,11 +5,16 @@ import { createMap } from './map/createMap.js';
 import { LocationTracker } from './location/locationTracker.js';
 import { NysParcelProvider } from './parcels/NysParcelProvider.js';
 import { ParcelController } from './parcels/parcelController.js';
+import { createMapLayersControl, readPropertyLinesEnabled } from './ui/mapLayersControl.js';
+import { createParcelPanel } from './ui/parcelPanel.js';
 
 const elements = {
   networkStatus: document.querySelector('#network-status'),
   gpsChip: document.querySelector('#gps-chip'),
   locationStatus: document.querySelector('#location-status'),
+  layersButton: document.querySelector('#layers-button'),
+  layersPanel: document.querySelector('#layers-panel'),
+  layersClose: document.querySelector('#layers-close'),
   parcelToggle: document.querySelector('#parcel-toggle'),
   parcelStatus: document.querySelector('#parcel-status'),
   bearingReset: document.querySelector('#bearing-reset'),
@@ -19,6 +24,8 @@ const elements = {
   message: document.querySelector('#map-message'),
   panel: document.querySelector('#parcel-panel'),
   panelClose: document.querySelector('#parcel-panel-close'),
+  panelHandle: document.querySelector('#parcel-panel-handle'),
+  panelExpandedContent: document.querySelector('#parcel-panel-expanded'),
   owner: document.querySelector('#parcel-owner'),
   acreage: document.querySelector('#parcel-acreage'),
   parcelId: document.querySelector('#parcel-id'),
@@ -31,9 +38,9 @@ const elements = {
   recordNext: document.querySelector('#parcel-record-next'),
 };
 
-let selection = [];
-let selectionIndex = 0;
 let parcelController;
+let layersControl;
+let parcelPanel;
 let parcelDiagnosticSequence = 0;
 const parcelDiagnostics = [];
 globalThis.huntNavParcelDiagnostics = parcelDiagnostics;
@@ -69,8 +76,7 @@ function renderLocationState({ state, message }) {
 }
 
 function renderParcelState({ state, message }) {
-  elements.parcelStatus.textContent = message;
-  elements.parcelToggle.dataset.state = state;
+  layersControl.setStatus({ state, message });
 }
 
 function renderParcelDiagnostic(diagnostic) {
@@ -82,59 +88,42 @@ function renderParcelDiagnostic(diagnostic) {
   console.info(`[HuntNav parcel diagnostic #${entry.sequence}]`, entry);
 }
 
-function formatAcreage(value, basis) {
-  if (value === null || value === undefined) return 'Unavailable';
-  const suffix = basis === 'calculated' ? ' · calculated' : basis === 'assessed' ? ' · assessed' : '';
-  return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })} acres${suffix}`;
-}
+const initialPropertyLinesEnabled = readPropertyLinesEnabled();
+layersControl = createMapLayersControl({
+  elements: {
+    menuButton: elements.layersButton,
+    panel: elements.layersPanel,
+    closeButton: elements.layersClose,
+    propertyToggle: elements.parcelToggle,
+    propertyStatus: elements.parcelStatus,
+  },
+  initialPropertyLinesEnabled,
+  onPropertyLinesChange: (enabled) => parcelController?.setEnabled(enabled),
+  onHint: showMessage,
+});
 
-function renderSelectedRecord() {
-  const parcel = selection[selectionIndex];
-  if (!parcel) return;
-  const { properties } = parcel;
-  const { jurisdiction, source } = properties;
-  const places = [
-    jurisdiction.municipality,
-    jurisdiction.county ? `${jurisdiction.county} County` : null,
-    jurisdiction.subdivision,
-  ].filter(Boolean);
-  const years = [
-    source.rollYear ? `Assessment ${source.rollYear}` : null,
-    source.spatialYear ? `Geometry ${source.spatialYear}` : null,
-  ].filter(Boolean);
-
-  elements.owner.textContent = properties.owner ?? 'Unavailable';
-  elements.acreage.textContent = formatAcreage(properties.acreage, properties.acreageBasis);
-  elements.parcelId.textContent = properties.displayId ?? properties.parcelId ?? 'Unavailable';
-  elements.jurisdiction.textContent = places.join(' · ') || 'Unavailable';
-  elements.year.textContent = years.join(' · ') || 'Unavailable';
-  elements.source.textContent = source.name;
-  elements.source.href = source.url;
-
-  const multiple = selection.length > 1;
-  elements.recordNav.hidden = !multiple;
-  elements.recordCount.textContent = multiple
-    ? `${selectionIndex + 1} of ${selection.length} coincident records`
-    : '';
-  if (multiple) {
-    elements.recordPrev.disabled = selectionIndex === 0;
-    elements.recordNext.disabled = selectionIndex === selection.length - 1;
-  }
-  parcelController.selectRecord(properties.providerFeatureId);
-}
-
-function renderSelection(parcels) {
-  selection = parcels;
-  selectionIndex = 0;
-  if (!selection.length) {
-    elements.panel.classList.remove('is-open');
-    elements.panel.setAttribute('aria-hidden', 'true');
-    return;
-  }
-  renderSelectedRecord();
-  elements.panel.classList.add('is-open');
-  elements.panel.setAttribute('aria-hidden', 'false');
-}
+parcelPanel = createParcelPanel({
+  elements: {
+    panel: elements.panel,
+    closeButton: elements.panelClose,
+    handleButton: elements.panelHandle,
+    expandedContent: elements.panelExpandedContent,
+    owner: elements.owner,
+    acreage: elements.acreage,
+    parcelId: elements.parcelId,
+    jurisdiction: elements.jurisdiction,
+    year: elements.year,
+    source: elements.source,
+    recordNav: elements.recordNav,
+    recordCount: elements.recordCount,
+    recordPrev: elements.recordPrev,
+    recordNext: elements.recordNext,
+  },
+  onClose: () => parcelController?.clearSelection('panel-close-button'),
+  onRecordChange: (parcel) => parcelController?.selectRecord(
+    parcel.properties.providerFeatureId,
+  ),
+});
 
 const map = createMap('map');
 const locationTracker = new LocationTracker({ map, onState: renderLocationState });
@@ -148,8 +137,9 @@ map.on('load', () => {
     map,
     provider: parcelProvider,
     onState: renderParcelState,
-    onSelection: renderSelection,
+    onSelection: (parcels) => parcelPanel.setSelection(parcels),
     onDiagnostic: renderParcelDiagnostic,
+    enabled: layersControl.isPropertyLinesEnabled(),
   });
   parcelController.start();
 });
@@ -165,22 +155,8 @@ map.on('error', (event) => {
   if (navigator.onLine && event?.error?.message) showMessage('A live map resource could not be loaded');
 });
 
-elements.parcelToggle.addEventListener('click', () => {
-  const enabled = elements.parcelToggle.getAttribute('aria-pressed') !== 'true';
-  elements.parcelToggle.setAttribute('aria-pressed', String(enabled));
-  parcelController?.setEnabled(enabled);
-});
 elements.bearingReset.addEventListener('click', () => map.resetNorth({ duration: 500 }));
 elements.recenter.addEventListener('click', () => locationTracker.recenter());
-elements.panelClose.addEventListener('click', () => parcelController?.clearSelection('panel-close-button'));
-elements.recordPrev.addEventListener('click', () => {
-  selectionIndex = Math.max(0, selectionIndex - 1);
-  renderSelectedRecord();
-});
-elements.recordNext.addEventListener('click', () => {
-  selectionIndex = Math.min(selection.length - 1, selectionIndex + 1);
-  renderSelectedRecord();
-});
 
 globalThis.addEventListener('online', updateNetworkState);
 globalThis.addEventListener('offline', updateNetworkState);
