@@ -129,7 +129,7 @@ export function createParcelPanel({
   elements.panel.addEventListener('pointerdown', (event) => {
     if (event.isPrimary === false || (Number.isFinite(event.button) && event.button !== 0)) return;
     if (isInteractiveTarget(event.target, elements.panel, elements.handleButton)) return;
-    if (state === 'expanded' && isWithin(event.target, elements.expandedContent)) return;
+    if (state === 'expanded' && isWithin(event.target, elements.scrollBody)) return;
     handleDrag = {
       pointerId: event.pointerId,
       startY: event.clientY,

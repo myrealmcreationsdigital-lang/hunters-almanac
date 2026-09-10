@@ -83,23 +83,25 @@
             </div>
             <button id="parcel-panel-close" class="icon-button" type="button" aria-label="Close parcel details">×</button>
           </div>
-          <div id="parcel-record-nav" class="record-nav" hidden>
-            <button id="parcel-record-prev" type="button" aria-label="Previous parcel record">‹</button>
-            <span id="parcel-record-count"></span>
-            <button id="parcel-record-next" type="button" aria-label="Next parcel record">›</button>
-          </div>
-          <dl class="parcel-facts parcel-facts--primary">
-            <div><dt>Owner</dt><dd id="parcel-owner">—</dd></div>
-            <div><dt>Acreage</dt><dd id="parcel-acreage">—</dd></div>
-            <div><dt>Parcel ID / SBL</dt><dd id="parcel-id">—</dd></div>
-          </dl>
-          <div id="parcel-panel-expanded" class="parcel-panel__expanded" hidden inert>
-            <dl class="parcel-facts parcel-facts--secondary">
-              <div><dt>Jurisdiction</dt><dd id="parcel-jurisdiction">—</dd></div>
-              <div><dt>Data year</dt><dd id="parcel-year">—</dd></div>
-              <div><dt>Source</dt><dd><a id="parcel-source" href="https://gis.ny.gov/parcels" target="_blank" rel="noreferrer">NYS ITS Geospatial Services</a></dd></div>
+          <div id="parcel-panel-body" class="parcel-panel__body">
+            <div id="parcel-record-nav" class="record-nav" hidden>
+              <button id="parcel-record-prev" type="button" aria-label="Previous parcel record">‹</button>
+              <span id="parcel-record-count"></span>
+              <button id="parcel-record-next" type="button" aria-label="Next parcel record">›</button>
+            </div>
+            <dl class="parcel-facts parcel-facts--primary">
+              <div><dt>Owner</dt><dd id="parcel-owner">—</dd></div>
+              <div><dt>Acreage</dt><dd id="parcel-acreage">—</dd></div>
+              <div><dt>Parcel ID / SBL</dt><dd id="parcel-id">—</dd></div>
             </dl>
-            <p class="parcel-disclaimer">Property lines are for planning and general use only. They are not a legal survey. Source data may be incomplete, inaccurate, or out of date.</p>
+            <div id="parcel-panel-expanded" class="parcel-panel__expanded" hidden inert>
+              <dl class="parcel-facts parcel-facts--secondary">
+                <div><dt>Jurisdiction</dt><dd id="parcel-jurisdiction">—</dd></div>
+                <div><dt>Data year</dt><dd id="parcel-year">—</dd></div>
+                <div><dt>Source</dt><dd><a id="parcel-source" href="https://gis.ny.gov/parcels" target="_blank" rel="noreferrer">NYS ITS Geospatial Services</a></dd></div>
+              </dl>
+              <p class="parcel-disclaimer">Property lines are for planning and general use only. They are not a legal survey. Source data may be incomplete, inaccurate, or out of date.</p>
+            </div>
           </div>
         </aside>
       </main>

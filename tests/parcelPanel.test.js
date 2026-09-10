@@ -43,12 +43,16 @@ class FakeElement {
 
 function elements() {
   const panel = new FakeElement();
+  const scrollBody = new FakeElement();
+  scrollBody.parentElement = panel;
   const expandedContent = new FakeElement();
-  expandedContent.parentElement = panel;
+  expandedContent.parentElement = scrollBody;
   const result = {
     panel,
     closeButton: new FakeElement('BUTTON'),
     handleButton: new FakeElement('BUTTON'),
+    header: new FakeElement(),
+    scrollBody,
     expandedContent,
     owner: new FakeElement(),
     acreage: new FakeElement(),
@@ -64,19 +68,30 @@ function elements() {
   Object.values(result).forEach((element) => {
     if (element !== panel && element.parentElement === null) element.parentElement = panel;
   });
+  for (const element of [result.owner, result.acreage, result.parcelId, result.recordNav]) {
+    element.parentElement = scrollBody;
+  }
   result.source.parentElement = expandedContent;
   return result;
 }
 
 function drag(panelElements, target, startY, endY, pointerId = 7) {
+  let prevented = 0;
   panelElements.panel.dispatch('pointerdown', {
     button: 0,
     isPrimary: true,
     pointerId,
     clientY: startY,
     target,
+    preventDefault: () => { prevented += 1; },
   });
-  panelElements.panel.dispatch('pointerup', { pointerId, clientY: endY, target });
+  panelElements.panel.dispatch('pointerup', {
+    pointerId,
+    clientY: endY,
+    target,
+    preventDefault: () => { prevented += 1; },
+  });
+  return { prevented };
 }
 
 function parcel(id, owner = `Owner ${id}`) {
@@ -136,13 +151,13 @@ test('drags upward from the compact non-interactive sheet surface to expand', ()
   assert.equal(panelElements.panel.capturedPointerId, 7);
 });
 
-test('drags downward from expanded non-scrollable sheet area to collapse', () => {
+test('drags downward from the expanded header to collapse', () => {
   const panelElements = elements();
   const panel = createParcelPanel({ elements: panelElements });
   panel.setSelection([parcel('101')]);
   panel.expand();
 
-  drag(panelElements, panelElements.owner, 130, 180, 8);
+  drag(panelElements, panelElements.header, 130, 180, 8);
 
   assert.equal(panel.getState(), 'compact');
 });
@@ -175,17 +190,19 @@ test('does not start sheet drags from buttons or links', () => {
   }
 });
 
-test('preserves expanded content scrolling instead of treating it as a sheet drag', () => {
+test('does not capture or prevent pointer gestures from the expanded scroll body', () => {
   const panelElements = elements();
   const panel = createParcelPanel({ elements: panelElements });
   panel.setSelection([parcel('101')]);
   panel.expand();
-  panelElements.expandedContent.scrollTop = 24;
+  panelElements.scrollBody.scrollTop = 24;
 
-  drag(panelElements, panelElements.expandedContent, 130, 190);
+  const gesture = drag(panelElements, panelElements.owner, 130, 190);
 
   assert.equal(panel.getState(), 'expanded');
-  assert.equal(panelElements.expandedContent.scrollTop, 24);
+  assert.equal(panelElements.scrollBody.scrollTop, 24);
+  assert.equal(panelElements.panel.capturedPointerId, undefined);
+  assert.equal(gesture.prevented, 0);
 });
 
 test('ordinary sheet taps do not toggle the state', () => {
