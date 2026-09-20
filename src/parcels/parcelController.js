@@ -595,11 +595,11 @@ export class ParcelController {
     this.#ensureLayerOrder();
   }
 
-  // Explicit, unmistakable guarantee that parcel layers render above the USGS
+  // Explicit, unmistakable guarantee that parcel layers render above the primary
   // raster imagery, independent of the order addLayer() happened to run in.
   // moveLayer(id) with no beforeId moves a layer to the very top of the stack.
   #ensureLayerOrder() {
-    const imageryIndex = this.map.getStyle().layers.findIndex((layer) => layer.id === 'usgs-imagery-layer');
+    const imageryIndex = this.map.getStyle().layers.findIndex((layer) => layer.id === 'nys-imagery-layer');
     for (const id of ['parcel-fill', 'parcel-line-casing', 'parcel-line', 'parcel-selected-fill', 'parcel-selected-line']) {
       if (!this.map.getLayer(id)) continue;
       const layerIndex = this.map.getStyle().layers.findIndex((layer) => layer.id === id);
