@@ -1,6 +1,10 @@
 import { AttributionControl, Map, setWorkerUrl } from 'maplibre-gl';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import { INITIAL_VIEW, NYS_IMAGERY, USGS_IMAGERY } from '../config.js';
+import { INITIAL_VIEW, NYS_IMAGERY, NYS_LIDAR_RELIEF, USGS_IMAGERY } from '../config.js';
+import {
+  MAP_LAYER_IDS,
+  insertLidarReliefLayer,
+} from './lidarReliefMode.js';
 
 setWorkerUrl(maplibreWorkerUrl);
 
@@ -39,11 +43,20 @@ export function createMap(container) {
           maxzoom: NYS_IMAGERY.maxzoom,
           attribution: NYS_IMAGERY.attribution,
         },
+        [NYS_LIDAR_RELIEF.id]: {
+          type: 'raster',
+          tiles: NYS_LIDAR_RELIEF.tiles,
+          tileSize: NYS_LIDAR_RELIEF.tileSize,
+          minzoom: NYS_LIDAR_RELIEF.minzoom,
+          maxzoom: NYS_LIDAR_RELIEF.maxzoom,
+          bounds: NYS_LIDAR_RELIEF.bounds,
+          attribution: NYS_LIDAR_RELIEF.attribution,
+        },
       },
-      layers: [
-        { id: 'field-background', type: 'background', paint: { 'background-color': '#07100d' } },
+      layers: insertLidarReliefLayer([
+        { id: MAP_LAYER_IDS.fieldBackground, type: 'background', paint: { 'background-color': '#07100d' } },
         {
-          id: 'usgs-imagery-coarse-layer',
+          id: MAP_LAYER_IDS.coarseUsgsImagery,
           type: 'raster',
           source: 'usgs-imagery-coarse',
           paint: {
@@ -55,7 +68,7 @@ export function createMap(container) {
           },
         },
         {
-          id: 'usgs-imagery-layer',
+          id: MAP_LAYER_IDS.usgsImagery,
           type: 'raster',
           source: USGS_IMAGERY.id,
           paint: {
@@ -67,7 +80,7 @@ export function createMap(container) {
           },
         },
         {
-          id: 'nys-imagery-layer',
+          id: MAP_LAYER_IDS.nysImagery,
           type: 'raster',
           source: NYS_IMAGERY.id,
           paint: {
@@ -78,7 +91,7 @@ export function createMap(container) {
             'raster-resampling': 'linear',
           },
         },
-      ],
+      ], NYS_LIDAR_RELIEF.id),
     },
   });
 

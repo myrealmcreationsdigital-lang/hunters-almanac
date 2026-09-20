@@ -18,6 +18,16 @@ export const NYS_IMAGERY = {
   attribution: 'NYS ITS Geospatial Services',
 };
 
+export const NYS_LIDAR_RELIEF = {
+  id: 'nys-lidar-relief',
+  tiles: ['https://elevation.its.ny.gov/arcgis/rest/services/NYS_Statewide_Hillshade/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=512,512&dpi=96&format=jpg&transparent=false&layers=show%3A0&f=image'],
+  tileSize: 512,
+  minzoom: 9,
+  maxzoom: 17,
+  bounds: [-80.00563734663238, 40.40403892102133, -71.60554847558802, 45.04145913931448],
+  attribution: 'NYS ITS Geospatial Services; elevation sources USGS/FEMA',
+};
+
 export const NYS_PARCELS = {
   providerId: 'us-ny-nys-tax-parcels',
   serviceUrl: 'https://services6.arcgis.com/EbVsqZ18sv1kVJ3k/ArcGIS/rest/services/NYS_Tax_Parcels_Public/FeatureServer/1',

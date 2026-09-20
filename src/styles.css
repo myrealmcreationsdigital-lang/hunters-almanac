@@ -178,6 +178,8 @@ button { font: inherit; }
   cursor: pointer;
 }
 
+.layer-toggle + .layer-toggle { margin-top: 8px; }
+
 .layer-toggle:hover, .layer-toggle:focus-visible { border-color: rgba(234, 211, 143, 0.58); outline: none; }
 
 .layer-toggle__icon {

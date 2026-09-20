@@ -2,6 +2,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
 import { createMap } from './map/createMap.js';
+import { createLidarReliefMode } from './map/lidarReliefMode.js';
 import { LocationTracker } from './location/locationTracker.js';
 import { NysParcelProvider } from './parcels/NysParcelProvider.js';
 import { ParcelController } from './parcels/parcelController.js';
@@ -17,6 +18,8 @@ const elements = {
   layersClose: document.querySelector('#layers-close'),
   parcelToggle: document.querySelector('#parcel-toggle'),
   parcelStatus: document.querySelector('#parcel-status'),
+  lidarReliefToggle: document.querySelector('#lidar-relief-toggle'),
+  lidarReliefStatus: document.querySelector('#lidar-relief-status'),
   bearingReset: document.querySelector('#bearing-reset'),
   bearingArrow: document.querySelector('#bearing-arrow'),
   bearingValue: document.querySelector('#bearing-value'),
@@ -41,6 +44,8 @@ const elements = {
 
 let parcelController;
 let layersControl;
+let lidarReliefMode;
+let requestedLidarReliefEnabled = false;
 let parcelPanel;
 let parcelDiagnosticSequence = 0;
 const parcelDiagnostics = [];
@@ -97,9 +102,15 @@ layersControl = createMapLayersControl({
     closeButton: elements.layersClose,
     propertyToggle: elements.parcelToggle,
     propertyStatus: elements.parcelStatus,
+    lidarReliefToggle: elements.lidarReliefToggle,
+    lidarReliefStatus: elements.lidarReliefStatus,
   },
   initialPropertyLinesEnabled,
   onPropertyLinesChange: (enabled) => parcelController?.setEnabled(enabled),
+  onLidarReliefChange: (enabled) => {
+    requestedLidarReliefEnabled = enabled;
+    lidarReliefMode?.setEnabled(enabled);
+  },
   onHint: showMessage,
 });
 
@@ -135,6 +146,8 @@ locationTracker.start();
 
 map.on('load', () => {
   locationTracker.markMapReady();
+  lidarReliefMode = createLidarReliefMode(map);
+  lidarReliefMode.setEnabled(requestedLidarReliefEnabled);
   parcelController = new ParcelController({
     map,
     provider: parcelProvider,

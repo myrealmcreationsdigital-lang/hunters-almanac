@@ -38,8 +38,33 @@ function elements() {
     closeButton: new FakeElement(),
     propertyToggle: new FakeElement(),
     propertyStatus: new FakeElement(),
+    lidarReliefToggle: new FakeElement(),
+    lidarReliefStatus: new FakeElement(),
   };
 }
+
+test('starts LiDAR Relief off and reports toggle changes', () => {
+  const controls = elements();
+  const changes = [];
+  const control = createMapLayersControl({
+    elements: controls,
+    storage: memoryStorage(),
+    onLidarReliefChange: (enabled) => changes.push(enabled),
+  });
+
+  assert.equal(control.isLidarReliefEnabled(), false);
+  assert.equal(controls.lidarReliefToggle.getAttribute('aria-pressed'), 'false');
+  assert.equal(controls.lidarReliefStatus.textContent, 'Bare-earth terrain off');
+
+  controls.lidarReliefToggle.click();
+  assert.equal(control.isLidarReliefEnabled(), true);
+  assert.equal(controls.lidarReliefToggle.getAttribute('aria-pressed'), 'true');
+  assert.equal(controls.lidarReliefStatus.textContent, 'Bare-earth terrain on');
+
+  controls.lidarReliefToggle.click();
+  assert.equal(control.isLidarReliefEnabled(), false);
+  assert.deepEqual(changes, [true, false]);
+});
 
 test('reads and persists the Property Lines setting', () => {
   const storage = memoryStorage({ [PROPERTY_LINES_STORAGE_KEY]: 'false' });

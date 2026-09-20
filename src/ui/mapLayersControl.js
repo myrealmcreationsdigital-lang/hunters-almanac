@@ -24,10 +24,13 @@ export function createMapLayersControl({
   elements,
   storage = globalThis.localStorage,
   initialPropertyLinesEnabled = readPropertyLinesEnabled(storage),
+  initialLidarReliefEnabled = false,
   onPropertyLinesChange = () => {},
+  onLidarReliefChange = () => {},
   onHint = () => {},
 }) {
   let propertyLinesEnabled = Boolean(initialPropertyLinesEnabled);
+  let lidarReliefEnabled = Boolean(initialLidarReliefEnabled);
   let open = false;
 
   const renderOpenState = () => {
@@ -47,6 +50,14 @@ export function createMapLayersControl({
     }
   };
 
+  const renderLidarReliefState = () => {
+    elements.lidarReliefToggle.setAttribute('aria-pressed', String(lidarReliefEnabled));
+    elements.lidarReliefStatus.textContent = lidarReliefEnabled
+      ? 'Bare-earth terrain on'
+      : 'Bare-earth terrain off';
+    elements.lidarReliefToggle.dataset.state = lidarReliefEnabled ? 'on' : 'off';
+  };
+
   const setOpen = (nextOpen) => {
     open = Boolean(nextOpen);
     renderOpenState();
@@ -62,19 +73,34 @@ export function createMapLayersControl({
     if (!previous && propertyLinesEnabled) onHint(PROPERTY_LINES_HINT);
   };
 
+  const setLidarReliefEnabled = (enabled, { notify = true } = {}) => {
+    const previous = lidarReliefEnabled;
+    lidarReliefEnabled = Boolean(enabled);
+    renderLidarReliefState();
+    if (notify && previous !== lidarReliefEnabled) {
+      onLidarReliefChange(lidarReliefEnabled, { previous });
+    }
+  };
+
   elements.menuButton.addEventListener('click', () => setOpen(!open));
   elements.closeButton.addEventListener('click', () => setOpen(false));
   elements.propertyToggle.addEventListener('click', () => {
     setPropertyLinesEnabled(!propertyLinesEnabled);
   });
+  elements.lidarReliefToggle.addEventListener('click', () => {
+    setLidarReliefEnabled(!lidarReliefEnabled);
+  });
 
   renderOpenState();
   renderPropertyLinesState();
+  renderLidarReliefState();
 
   return {
     isPropertyLinesEnabled: () => propertyLinesEnabled,
+    isLidarReliefEnabled: () => lidarReliefEnabled,
     setOpen,
     setPropertyLinesEnabled,
+    setLidarReliefEnabled,
     setStatus({ state, message }) {
       elements.propertyStatus.textContent = message;
       elements.propertyToggle.dataset.state = state;
