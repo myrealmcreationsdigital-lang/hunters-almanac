@@ -8,6 +8,10 @@ import { NysParcelProvider } from './parcels/NysParcelProvider.js';
 import { ParcelController } from './parcels/parcelController.js';
 import { createMapLayersControl, readPropertyLinesEnabled } from './ui/mapLayersControl.js';
 import { createParcelPanel } from './ui/parcelPanel.js';
+import { WaypointRepository } from './waypoints/waypointRepository.js';
+import { startWaypointStore } from './waypoints/waypointStore.js';
+
+export const waypointStore = startWaypointStore({ repository: new WaypointRepository() });
 
 const elements = {
   networkStatus: document.querySelector('#network-status'),
