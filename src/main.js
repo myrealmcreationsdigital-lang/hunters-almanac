@@ -2,7 +2,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
 import { createMap } from './map/createMap.js';
+import { createMapInteractionController } from './map/mapInteractionController.js';
 import { createLidarReliefMode } from './map/lidarReliefMode.js';
+import { createWaypointLayer } from './map/waypointLayer.js';
 import { LocationTracker } from './location/locationTracker.js';
 import { NysParcelProvider } from './parcels/NysParcelProvider.js';
 import { ParcelController } from './parcels/parcelController.js';
@@ -47,8 +49,10 @@ const elements = {
 };
 
 let parcelController;
+let mapInteractionController;
 let layersControl;
 let lidarReliefMode;
+let waypointLayer;
 let requestedLidarReliefEnabled = false;
 let parcelPanel;
 let parcelDiagnosticSequence = 0;
@@ -161,6 +165,13 @@ map.on('load', () => {
     enabled: layersControl.isPropertyLinesEnabled(),
   });
   parcelController.start();
+  waypointLayer = createWaypointLayer({ map, store: waypointStore });
+  mapInteractionController = createMapInteractionController({
+    map,
+    waypointLayer,
+    parcelController,
+  });
+  mapInteractionController.start();
 });
 
 map.on('rotate', () => {
@@ -179,7 +190,11 @@ elements.recenter.addEventListener('click', () => locationTracker.recenter());
 
 globalThis.addEventListener('online', updateNetworkState);
 globalThis.addEventListener('offline', updateNetworkState);
-globalThis.addEventListener('beforeunload', () => locationTracker.stop());
+globalThis.addEventListener('beforeunload', () => {
+  mapInteractionController?.stop();
+  waypointLayer?.destroy();
+  locationTracker.stop();
+});
 updateNetworkState();
 
 registerSW({

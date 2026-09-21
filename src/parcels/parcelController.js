@@ -68,7 +68,8 @@ export class ParcelController {
     this.onMoveEnd = () => this.refresh();
     this.onMoveStart = () => { this.mapIdle = false; };
     this.onMapIdle = () => { this.mapIdle = true; };
-    this.onMapClick = (event) => this.#select(event);
+    this.handleMapClick = (event) => this.#select(event);
+    this.onMapClick = this.handleMapClick;
   }
 
   start() {
@@ -77,7 +78,6 @@ export class ParcelController {
     this.map.on('movestart', this.onMoveStart);
     this.map.on('moveend', this.onMoveEnd);
     this.map.on('idle', this.onMapIdle);
-    this.map.on('click', this.onMapClick);
     this.map.on('mouseenter', 'parcel-fill', () => {
       this.map.getCanvas().style.cursor = 'pointer';
     });
